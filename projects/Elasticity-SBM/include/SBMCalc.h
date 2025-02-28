@@ -587,6 +587,12 @@ void SBMCalc::GetDirichletBC(const double (&d_)[DIM], double *DirichletBCValue, 
   }
   }
 
+  if (idata_->bccaseType == POSITION_DISPLACEMENT)
+  {
+    DirichletBCValue[0] = sin(M_PI*x_true)*cos(M_PI*y_true)/10.0;
+    DirichletBCValue[1] = cos(M_PI*x_true)*sin(M_PI*y_true)/10.0;
+    DirichletHaveSet = true;
+  }
 #endif
 
 #if (DIM == 3)

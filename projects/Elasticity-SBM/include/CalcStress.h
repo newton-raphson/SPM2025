@@ -95,13 +95,13 @@ void CalcStress::traverseOperation(TALYFEMLIB::FEMElm &fe, const PetscScalar *va
 
         for (int i = 0; i < DIM; i++)
         {
-            StrainVector[i] += duidj[i * DIM + i] / fe.nbf();
+            StrainVector[i] += duidj[i * DIM + i] / fe.n_itg_pts();
 #ifndef NDEBUG
 //            StrainVector_eachGP[GPID][i] = duidj[i * DIM + i] / fe.nbf();
 #endif
         }
 
-        StrainVector[DIM] += (duidj[0 * DIM + 1] + duidj[1 * DIM + 0]) / fe.nbf();
+        StrainVector[DIM] += (duidj[0 * DIM + 1] + duidj[1 * DIM + 0]) / fe.n_itg_pts();
 #ifndef NDEBUG
 //        StrainVector_eachGP[GPID][DIM] = duidj[0 * DIM + 1] + duidj[1 * DIM + 0];
 #endif

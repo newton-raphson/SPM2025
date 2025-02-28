@@ -477,6 +477,23 @@ for(int a = 0; a < n_basis_functions; a++)
                   }
               }
           }
+          for (int j = 0; j < n_basis_functions; j++)
+          {
+              for (int dim = 0; dim < DIM; dim++)
+              {
+                  for (int dim2 = 0; dim2 < DIM; dim2++)
+                  {
+                      if (dim2 == dim)
+                      {
+                          Ne_con_[dim][DIM * j + dim2] = fe.N(j);
+                      }
+                      else
+                      {
+                          Ne_con_[dim][DIM * j + dim2] = 0.0;
+                      }
+                  }
+              }
+          }
 
           // for Final term => B_T*C_T*n*N
           const double detJxW = fe.detJxW();
@@ -496,7 +513,6 @@ for(int a = 0; a < n_basis_functions; a++)
 
                   Ae(a, b) += N; // adjoint consistency
 
-                  // std::cout << " N_con = " << N_con << "\n";
                   Ae(b, a) -= N_con; // consistency
               }
           }
