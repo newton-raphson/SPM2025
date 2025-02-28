@@ -1,0 +1,137 @@
+# Basic parameters of the case
+elemOrder = 1;
+ifMatrixFree = False;
+
+################### Geometry ####################
+
+background_mesh = {
+  baseLevel = 8
+  refineLevelBoundary = 8
+  min = [0.0, 0.0, 0.0]
+  max = [8.0, 8.0, 1.0]
+
+
+  #Specify periodicity
+  periodicBoundariesAndScale = [0.0, 0.0, 0.0]
+}
+
+
+# Physical Domain
+physDomainMin = [0.0, 0.0, 0.0]
+physDomainMax = [8.0, 1.0, 1.0]
+
+
+rectLowerLeft = [0.1, 0.1]
+rectUpperRight = [7.9, 0.9]
+rect_lvl = 10
+
+
+
+########### Time setting and file writing ###########
+
+dt = 1e-4
+totalTime = 1e-2
+restartTimeEof = 1
+
+#File writing
+OutputSpan = 1
+checkpointFrequency = 500
+
+################### NS Parameters ####################
+
+Re = 1.0;
+Fr = 0.0;
+ndcf_time = 0.001456292;
+ndcf_conv = 0.001456292;
+ndcf_diff = 1.0;
+ndcf_pres = 1.0;
+ndcf_pnp_coupling = 21.45286;
+#ndcf_pnp_coupling = 0;
+
+Ci_f = 36;
+scale = 1.0;
+
+MMS = False;
+
+#NS Stuff
+timeScheme = "bdf" #cn
+nsOrder = 2;
+ifUseRotationalForm = false;
+ifLinearNS = true;
+pExtrapOrder = 2;
+
+################### PNP Parameters ####################
+
+#PNP Stuff
+numSpecies = 2;
+A_=[1.0, 1.0]
+B_=[1.0, 1.0]
+C_=[1.0, 1.0]
+D_=[1.0, 1.0]
+E_=-0.018856
+#E_=0
+
+
+eofPNPonlybottomPotential = -2.707
+eofInletPotential = 0.30944
+eofbottomPotetialSlope = -0.03868
+eofbottomPotetialIntercept = -2.39756
+
+################### solver setting ####################
+solver_options_momentum = {
+  ksp_atol = 1e-8
+  ksp_rtol = 1e-8
+  ksp_stol = 1e-8
+  #ksp_max_it = 2000
+  ksp_type = "bcgs"
+  #pc_type = "lu"
+  pc_type = "asm"
+  #sub_pc_type = "lu"
+#multigrid
+  #ksp_type = "fgmres"
+  #pc_type = "gamg"
+  #pc_gamg_asm_use_agg = True
+  #mg_levels_ksp_type = "gmres"
+  #mg_levels_pc_type = "sor"
+  #mg_levels_sub_pc_type = "lu"
+  #mg_levels_ksp_max_it = 25
+#direct solver
+  #ksp_type = "bcgs"
+  #pc_type = "lu"
+  #pc_factor_mat_solver_package = "mumps"
+  #pc_factor_levels = 3
+# monitor
+  #snes_monitor = ""
+  snes_converged_reason = ""
+  #ksp_monitor = ""
+  ksp_converged_reason = ""
+};
+
+solver_options_pnp = {
+  ksp_atol = 1e-8
+  ksp_rtol = 1e-8
+  ksp_stol = 1e-8
+  #ksp_monitor = ""
+  #ksp_converged_reason=""
+  #pc_type = "none"
+  ksp_type = "bcgs"
+  pc_type = "asm"
+#multigrid
+  #ksp_type = "fgmres"
+  #pc_type = "gamg"
+  #pc_gamg_asm_use_agg = True
+  #mg_levels_ksp_type = "gmres"
+  #mg_levels_pc_type = "sor"
+  #mg_levels_sub_pc_type = "lu"
+  #mg_levels_ksp_max_it = 15
+#direct solver
+  #ksp_type = "bcgs"
+  #pc_type = "lu"
+  #pc_factor_mat_solver_package = "mumps"
+  #pc_factor_levels = 3
+# monitor
+  #snes_monitor = ""
+  snes_converged_reason = ""
+  #ksp_monitor = ""
+  ksp_converged_reason = ""
+};

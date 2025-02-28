@@ -1,0 +1,113 @@
+# Basic parameters of the case
+elemOrder = 1;
+ifMatrixFree = False;
+
+################### Geometry ####################
+
+background_mesh = {
+  baseLevel = 6
+  refineLevelBoundary = 2
+  min = [0.0, 0.0, 0.0]
+  max = [1.0, 1.0, 1.0]
+
+
+  #Specify periodicity
+  periodicBoundariesAndScale = [0.0, 0.0, 0.0]
+}
+
+
+#File writing
+OutputSpan = 40
+checkpointFrequency = 160
+
+
+################### NS Parameters ####################
+
+Re = 10;
+Fr = 0.0;
+Ci_f = 36;
+scale = 1.0;
+
+MMS = True;
+
+#NS Stuff
+timeScheme = "bdf"
+nsOrder = 2;
+ifUseRotationalForm = false;
+ifLinearNS = true;
+pExtrapOrder = 2;
+
+
+
+################### PNP Parameters ####################
+
+#PNP Stuff
+numSpecies = 2;
+A_=[1.0, 1.0]
+B_=[1.0, 1.0]
+C_=[1.0, 1.0]
+D_=[1.0, 1.0]
+E_=1.0
+
+################### Time setting ####################
+
+dt = 0.01
+totalTime = 100
+
+################### solver setting ####################
+solver_options_momentum = {
+  ksp_atol = 1e-14
+  ksp_rtol = 1e-14
+  ksp_stol = 1e-14
+  #ksp_max_it = 2000
+  ksp_type = "bcgs"
+  pc_type = "asm"
+  #sub_pc_type = "lu"
+#multigrid
+  #ksp_type = "fgmres"
+  #pc_type = "gamg"
+  #pc_gamg_asm_use_agg = True
+  #mg_levels_ksp_type = "gmres"
+  #mg_levels_pc_type = "sor"
+  #mg_levels_sub_pc_type = "lu"
+  #mg_levels_ksp_max_it = 25
+#direct solver
+  #ksp_type = "bcgs"
+  #pc_type = "lu"
+  #pc_factor_mat_solver_package = "mumps"
+  #pc_factor_levels = 3
+# monitor
+  #snes_monitor = ""
+  #snes_converged_reason = ""
+  ksp_monitor = ""
+  ksp_converged_reason = ""
+};
+
+solver_options_pnp = {
+  ksp_atol = 1e-14
+  ksp_rtol = 1e-14
+  ksp_stol = 1e-14
+  #ksp_monitor = ""
+  #ksp_converged_reason=""
+  #pc_type = "none"
+  ksp_type = "bcgs"
+  pc_type = "asm"
+#multigrid
+  #ksp_type = "fgmres"
+  #pc_type = "gamg"
+  #pc_gamg_asm_use_agg = True
+  #mg_levels_ksp_type = "gmres"
+  #mg_levels_pc_type = "sor"
+  #mg_levels_sub_pc_type = "lu"
+  #mg_levels_ksp_max_it = 15
+#direct solver
+  #ksp_type = "bcgs"
+  #pc_type = "lu"
+  #pc_factor_mat_solver_package = "mumps"
+  #pc_factor_levels = 3
+# monitor
+  snes_monitor = ""
+  snes_converged_reason = ""
+  ksp_monitor = ""
+  ksp_converged_reason = ""
+};

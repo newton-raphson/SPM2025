@@ -1,0 +1,88 @@
+################# FEM Parameters #####################
+basisFunction = "linear"
+
+################# NS Parameters ######################
+TimeStepper = "BDF2";
+#TimeStepper = "BE";
+#TimeStepper = "CN";
+
+Re = 100.0;
+DiffFineTerms = True;
+SecondViscosity = True;
+VelocityExtrapolationOrder = 1;
+
+DoReRamping = False;
+RampingTime = 10000;
+RampingRe = 9500;
+
+MMS = False;
+
+
+totalT = 1e8
+dt = 1e8
+################# MESH Parameters ######################
+background_mesh = {
+  baseLevel = 5
+  refineLevelBoundary = 5
+
+  # cube domain
+  min = [0.0, 0.0, 0.0]
+  max = [1.0, 1.0, 1.0]
+
+  #Specify periodicity
+  periodicBoundariesAndScale = [0.0, 0.0, 0.0]
+
+}
+
+# Physical Domain
+physDomainMin = [0.0, 0.0, 0.0]
+physDomainMax = [1.0, 1.0, 1.0]
+
+
+stlFileName = "model_scaled.stl"
+stlRetainInside = false
+
+################### Refinement in a Region ###############
+
+rectLowerLeft = [0.2, 0.2]
+rectUpperRight = [0.8, 0.8]
+rect_lvl = 6
+
+
+################### checkpoint and output setting ###############
+checkpointFrequency = 1
+checkpointNumberOfBackups = 1
+
+# for output
+OutputSpan = 1
+
+
+
+################### solver setting ####################
+solver_options = {
+  ksp_atol = 1e-14
+  ksp_rtol = 1e-14
+  ksp_stol = 1e-14
+  #ksp_max_it = 2000
+  ksp_type = "bcgs"
+  pc_type = "asm"
+  #sub_pc_type = "lu"
+#multigrid
+  #ksp_type = "fgmres"
+  #pc_type = "gamg"
+  #pc_gamg_asm_use_agg = True
+  #mg_levels_ksp_type = "gmres"
+  #mg_levels_pc_type = "sor"
+  #mg_levels_sub_pc_type = "lu"
+  #mg_levels_ksp_max_it = 25
+#direct solver
+  #ksp_type = "bcgs"
+  #pc_type = "lu"
+  #pc_factor_mat_solver_package = "mumps"
+  #pc_factor_levels = 3
+# monitor
+  #snes_monitor = ""
+  #snes_converged_reason = ""
+  ksp_monitor = ""
+  ksp_converged_reason = ""
+};

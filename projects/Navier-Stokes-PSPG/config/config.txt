@@ -1,0 +1,57 @@
+Formulation = "PSPG";
+TimeStepper = "BE";
+basisFunction = "linear"
+Re = 76.9;
+MMS = False;
+background_mesh = {
+  baseLevel = 2
+  refineLevelBoundary = 2
+  min = [-0.9, -0.9, -1.3]
+  max = [0.9, 0.9, 1.3]
+}
+
+stlFileName = "pipe.stl"
+stlRetainInside = false
+
+totalT = 1e6
+dt = 1e6
+
+################### checkpoint setting ###############
+checkpointFrequency = 1
+checkpointNumberOfBackups = 2
+OutputSpan = 1
+
+
+
+################### solver setting ####################
+solver_options = {
+  snes_atol = 1e-8
+  snes_rtol = 1e-8
+  snes_stol = 1e-10
+  snes_max_it = 40
+  snes_max_funcs = 80000
+  ksp_max_it = 2000
+  ksp_type = "bcgs"
+  #pc_type = "asm"
+  pc_type = "lu"
+  #sub_pc_type = "lu"
+#multigrid
+  #ksp_type = "bcgs"
+  #pc_type = "gamg"
+  #pc_gamg_asm_use_agg = True
+  #mg_levels_ksp_type = "bcgs"
+  #mg_levels_pc_type = "asm"
+  #mg_levels_sub_pc_type = "lu"
+  #mg_levels_ksp_max_it = 50
+#direct solver
+  #ksp_type = "bcgs"
+  #pc_type = "lu"
+  #pc_factor_mat_solver_package = "mumps"
+  #pc_factor_levels = 3
+# monitor
+  snes_monitor = ""
+  snes_converged_reason = ""
+  ksp_monitor = ""
+  #ksp_converged_reason = ""
+
+};

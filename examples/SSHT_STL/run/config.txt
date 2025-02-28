@@ -1,0 +1,41 @@
+#################### Meshing Part ####################
+refine_lvl = 4
+
+# Cube Domain
+cubeDomainMin = [0.0, 0.0, 0.0]
+cubeDomainMax = [1.0, 1.0, 1.0]
+
+# Physical Domain
+physDomainMin = [0.0, 0.0, 0.0]
+physDomainMax = [1.0, 1.0, 1.0]
+
+
+# Mesh-3 .msh file name and retain side
+mshFileName = "example.msh"
+mshRetainInside = false
+
+## 3D Examples
+
+# Mesh-3 .stl file name and retain side
+# stlFileName = "spacex.stl"
+stlFileName = "airplane.stl"
+stlRetainInside = true
+
+
+
+#################### SSHT Part ####################
+
+basisFunction = "linear" # "quadratic"
+mfree = false # "true"
+dump_vec = "true"
+
+#################### solver setting ####################
+solver_options_ssht = {
+  ksp_max_it = 2000
+  ksp_type = "bcgs"
+  pc_type = "asm"
+  ksp_atol = 1e-7
+  ksp_rtol = 1e-10
+  ksp_converged_reason = ""
+  ksp_monitor = ""
+}

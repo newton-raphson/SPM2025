@@ -1,0 +1,98 @@
+dt = 1
+totalT = 2
+
+################## SBM ###################
+SBMGeo = "RING"
+#IfAdjointConsistency = False
+
+################# SBM end ################
+
+
+################# LE #####################
+LEcaseType = "planestress"
+planestress = {
+  young=1
+  poisson=0
+}
+
+LEBCcaseType = "ZeroTraction"
+
+bodyforce_V = [0.0 , 0.0 , 0.0]
+
+radialbodyforce = {
+  BR_pow = -1
+  BR_v = 1.442695040888963
+}
+
+##########################
+elemOrder = 1
+channel_mesh = {
+  refine_lvl_base = 5
+  refine_lvl_channel_wall = 5
+  enable_subda = false
+  min = [0, 0, 0]
+  max = [2,2,2]
+  refine_walls = true
+}
+
+### Coe setup => Cb_e is alpha in SBM
+#Cb_e = 20
+#Cb_e = 200
+Cb_e = 300
+#Cb_e = 400
+#Cb_e = 40
+#Cb_e =2000
+
+geometries_ibm = (
+ {
+ mesh_path = "./circle.msh"
+ name = "circle"
+ is_static = true
+ outer_boundary=true
+ position = [1.0, 1.0]
+ type = "meshobject_2d"
+ refine_lvl = 3
+ ######### LE #########
+ bc_type_D = ["dirichlet", "dirichlet"] # X,Y
+ D_value = [0.0, 0.0]
+},
+ {
+ mesh_path = "./icircle.msh"
+ name = "innercircle"
+ is_static = true
+ position = [1.0, 1.0]
+ type = "meshobject_2d"
+ refine_lvl = 3
+ ######### LE #########
+ bc_type_D = ["w_radial", "w_radial"] # X,Y
+ D_value = [0.25, 0.25]
+}
+)
+
+
+
+
+OutputStartTime = 1e8
+OutputInterval = 1
+CheckpointInterval = 10
+
+
+#################### solver setting ####################
+solver_options_le = {
+  ksp_max_it = 5000
+  ksp_type = "bcgs"
+  pc_type = "lu"
+
+#  ksp_type = "fgmres"
+# pc_type = "gamg"
+# pc_gamg_asm_use_agg = True
+# mg_levels_ksp_type = "gmres"
+# mg_levels_pc_type = "sor"
+# mg_levels_ksp_max_it = 40
+
+  ksp_rtol = 1e-8
+  #ksp_rtol = 1e-12
+  ksp_converged_reason = ""
+  ksp_monitor = ""
+}
+

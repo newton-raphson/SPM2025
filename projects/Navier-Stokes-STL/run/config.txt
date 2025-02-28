@@ -1,0 +1,44 @@
+################### mesh setting ######################
+basisFunction = "linear"
+mfree = "false"
+background_mesh = {
+  baseLevel = 4
+  refineLevelBoundary = 4
+  min = [-0.75, -0.75, -1.5]
+  max = [0.75, 0.75, 1.5]
+}
+
+stlFileName = "pipev2.stl"
+stlRetainInside = false
+
+################### timestepper setting ###############
+dt = 1e-2
+totalT = 500
+TimeStepper = "BDF2";
+
+
+################### checkpoint setting ###############
+checkpointFrequency = 10
+checkpointNumberOfBackups = 2
+OutputSpan = 10
+
+################### solver setting ####################
+Formulation = "PSPG";
+Re = 100;
+MMS = false;
+
+dump_vec = false
+################### petsc setting #####################
+solver_options = {
+  snes_atol = 1e-12
+  snes_rtol = 1e-12
+  snes_stol = 1e-10
+  snes_max_it = 40
+  snes_max_funcs = 80000
+  ksp_max_it = 2000
+  ksp_type = "bcgs"
+  pc_type = "asm"
+  # monitor
+  snes_monitor = ""
+  snes_converged_reason = ""
+};

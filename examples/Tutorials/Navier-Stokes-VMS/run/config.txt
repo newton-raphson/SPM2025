@@ -1,0 +1,35 @@
+################### mesh setting ######################
+basisFunction = "quadratic"
+mfree = "false"
+background_mesh = {
+  baseLevel = 3
+  refineLevelBoundary = 5
+  min = [0, 0, 0]
+  max = [1, 1, 1]
+}
+
+################### timestepper setting ###############
+dt = 1e-2
+totalT = 10
+TimeStepper = "BE";
+
+################### solver setting ####################
+Formulation = "PSPG";
+Re = 100;
+MMS = false;
+
+dump_vec = true
+################### petsc setting #####################
+solver_options = {
+  snes_atol = 1e-12
+  snes_rtol = 1e-12
+  snes_stol = 1e-10
+  snes_max_it = 40
+  snes_max_funcs = 80000
+  ksp_max_it = 2000
+  ksp_type = "bcgs"
+  pc_type = "asm"
+  # monitor
+  snes_monitor = ""
+  snes_converged_reason = ""
+};

@@ -1,0 +1,29 @@
+basisFunction = "linear" # "quadratic"
+mfree = false # "true"
+dt = 0.1
+totalT = 1.0
+BDF2 = "true" # "false"
+forcing = "true" # "false"
+
+
+#################### Geometry setting ####################
+refine_lvl = 5
+
+# Cube Domain
+cubeDomainMin = [0.0, 0.0, 0.0]
+cubeDomainMax = [1.0, 1.0, 1.0]
+
+# Physical Domain
+physDomainMin = [0.0, 0.0, 0.0]
+physDomainMax = [1.0, 1.0, 1.0]
+
+#################### solver setting ####################
+solver_options_ht = {
+  ksp_max_it = 2000
+  ksp_type = "bcgs"
+  pc_type = "asm"
+  ksp_atol = 1e-7
+  ksp_rtol = 1e-10
+  ksp_converged_reason = ""
+  ksp_monitor = ""
+}

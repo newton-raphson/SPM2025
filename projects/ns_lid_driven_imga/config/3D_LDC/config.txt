@@ -1,0 +1,128 @@
+################# FEM Parameters #####################
+basisFunction = "linear"
+
+################# NS Parameters ######################
+TimeStepper = "BDF2";
+#TimeStepper = "BE";
+#TimeStepper = "CN";
+
+Re = 100.0;
+DiffFineTerms = True;
+BoundaryTerms = True
+SecondViscosity = False
+RampingTerm_Coe_V = [0.0, 1.0]
+RampingTerm_Coe_ramping = [0, 2]
+CoefficientZeroForInitialGuess = True
+
+VelocityExtrapolationOrder = 1;
+
+DoReRamping = False;
+RampingTime = 10000;
+RampingRe = 100;
+
+MMS = False;
+
+
+#ImmersedMethod= "IBM"
+ImmersedMethod= "SBM"
+
+RatioGPSBM = 1
+
+#Cb_f = 2e7
+#Cb_f = 200
+Cb_f = 2e3
+
+totalT = 1e3
+dt = 1e3
+################# MESH Parameters ######################
+background_mesh = {
+  baseLevel = 5
+  refineLevelBoundary = 3
+
+  # cube domain
+  min = [0.0, 0.0, 0.0]
+  max = [2.0, 2.0, 2.0]
+
+  #Specify periodicity
+  periodicBoundariesAndScale = [0.0, 0.0, 0.0]
+
+}
+
+
+stlFileName = "model_scaled.stl"
+stlRetainInside = false
+
+# Physical Domain
+physDomainMin = [0.0, 0.0, 0.0]
+physDomainMax = [2.0, 2.0, 2.0]
+
+
+
+geometries = (
+{
+mesh_path = "sphere_R0p5.stl"                    #.stl file has to be binary not asci
+name = "sphere"
+position = [1.0,1.0,1.0]
+type = "meshobject"
+#bc_type_V = ["dirichlet", "dirichlet", "dirichlet", "dirichlet", "sbm"]
+bc_type_V = ["sbm", "sbm", "sbm", "sbm"]
+dirichlet_V = [0.0, 0.0, 0.0, 0.0]
+refine_lvl = 4
+}
+)
+
+
+################### Refinement in a Region ###############
+
+rectLowerLeft = [0.2, 0.2,0.2]
+rectUpperRight = [0.8, 0.8,0.8]
+rect_lvl = 3
+
+################### checkpoint and output setting ###############
+checkpointFrequency = 1000
+checkpointNumberOfBackups = 3
+
+# for output
+OutputSpan = 1
+
+
+
+################### solver setting ####################
+
+solver_options = {
+  snes_atol = 1e-8
+  snes_rtol = 1e-8
+  snes_stol = 1e-10
+  snes_max_it = 10
+  snes_max_funcs = 80000
+  ksp_max_it = 2000
+  #ksp_type = "gmres"
+  ksp_type = "bcgs"
+
+  #pc_type = "lu"
+  pc_type = "asm"
+  pc_asm_type = "basic" #This uses full interpolation and restriction. This means that all processes communicate their entire solution to all other processes. This can often improve the quality of the preconditioner, but at the cost of increased communication overhead.
+
+  ksp_atol = 1e-7
+  ksp_rtol = 1e-7
+  sub_pc_type = "lu"
+#multigrid
+  #ksp_type = "bcgs"
+  #pc_type = "gamg"
+  #pc_gamg_asm_use_agg = True
+  #mg_levels_ksp_type = "bcgs"
+  #mg_levels_pc_type = "asm"
+  #mg_levels_sub_pc_type = "lu"
+  #mg_levels_ksp_max_it = 50
+#direct solver
+  #ksp_type = "bcgs"
+  #pc_type = "lu"
+  #pc_factor_mat_solver_package = "mumps"
+  #pc_factor_levels = 3
+# monitor
+ snes_monitor = ""
+  snes_converged_reason = ""
+ #ksp_monitor = ""
+  #ksp_converged_reason = ""
+
+};

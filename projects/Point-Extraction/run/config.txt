@@ -1,0 +1,42 @@
+basisFunction = "linear" # "quadratic"
+refine_lvl_uni = 5
+refine_lvl_bd = 6
+
+#################### Geometry setting ####################
+# Cube Domain
+cubeDomainMin = [-1.0, -1.0, -1.0]
+cubeDomainMax = [1.0, 1.0, 1.0]
+
+# Physical Domain
+physDomainMin = [-1.0, -1.0, -1.0]
+physDomainMax = [1.0, 1.0, 1.0]
+
+## 2D Examples
+# Mesh-1 Circle center, radius and retain side
+circleCenter = [0.5, 0.5]
+circleRadius = 0.25
+circleRetainInside = true
+
+# Mesh-2 Rectangle lower left, upper right corners and retain side
+rectLowerLeft = [0.25, 0.25]
+rectUpperRight = [0.75, 0.75]
+rectRetainInside = true
+
+# Mesh-3 .msh file name and retain side
+mshFileName = "example.msh"
+mshRetainInside = false
+
+## 3D Examples
+# Mesh-1 Sphere center, radius and retain side
+sphereCenter = [0.5, 0.5, 0.5]
+sphereRadius = 0.25
+sphereRetainInside = true
+
+# Mesh-2 Box lower left, upper right corners and retain side
+boxLowerLeft = [0.25, 0.25, 0.25]
+boxUpperRight = [0.75, 0.75, 0.75]
+boxRetainInside = false
+
+# Mesh-3 .stl file name and retain side
+stlFileName = "rot_Eiffel_rescaled.stl"
+stlRetainInside = true

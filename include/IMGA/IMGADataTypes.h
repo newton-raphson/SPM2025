@@ -1,0 +1,37 @@
+//
+// Created by maksbh on 2/26/21.
+//
+
+#ifndef DENDRITEKT_IMGADATATYPES_H
+#define DENDRITEKT_IMGADATATYPES_H
+
+#include <DataTypes.h>
+
+enum ElementMarker : DENDRITE_UINT {
+  IN_ELEMENT = 0,
+  OUT_ELEMENT = 1,
+  INTERCEPTED_ELEMENT = 2,
+  IN_GP = 3,
+  OUT_GP = 4,
+  INTERCEPTED_GP= 5,
+  SBM_FALSE_INTERCEPTED = 6,
+  SBM_NEIGHBORS_FALSE_INTERCEPTED = 7,
+  MAX_ELMENT_TYPE = 8
+};
+enum MarkerType: bool{
+  ELEMENT_NODES = false,
+  GAUSS_POINT = true
+};
+
+enum IBM_METHOD : DENDRITE_UINT {
+  SBM = 0,
+  NITSCHE = 1
+};
+
+enum NodeMarker : int{
+    SBM_IN_NODES = 0,
+    SBM_OUT_NODES = 1,
+    SBM_FALSE_INTERCEPTED_NODES = 2
+
+};
+#endif //DENDRITEKT_IMGADATATYPES_H
