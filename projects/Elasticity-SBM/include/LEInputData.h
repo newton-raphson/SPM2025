@@ -298,18 +298,13 @@ public: // need to put the variable need to use in the other subroutine here!
   /// SBM geomtry type
   enum SBMGeo
   {
-    RING = 0,
-    ROTATE = 1,
-    SPHERE = 2,
-    BUNNY = 3,
-    BUNNY3D = 4,
-    STAR = 5,
-    MOAI = 6,
-    ARM = 7,
-    CIRCLE = 8,
-    cantilever = 9,
-    ARBITRARY = 10,
-    NONE = 11 // fix bug without the geometries
+    ////// all this geometries are for SPM2025 Paper
+    BUNNY = 1,
+    GYROID = 2,
+    PLANE = 3,
+    PLANT = 4,
+    EIFFEL = 5,
+    NONE = 5 // fix bug without the geometries
   };
   /// Declare the geo type of SBM
   SBMGeo SbmGeo = NONE;
@@ -556,32 +551,8 @@ public: // need to put the variable need to use in the other subroutine here!
     if (ibm_geom_def.size() != 0) {
         SbmGeo = read_SbmGeo(cfg.getRoot(), "SBMGeo");
 
-#if (DIM == 3)
-        /// Read type of dist calculation
-        if (SbmGeo != SBMGeo::SPHERE and SbmGeo != SBMGeo::NONE and SbmGeo != SBMGeo::cantilever) {
-            DistCalcType = read_DistCalc(cfg.getRoot(), "DistCalcType");
-        } else if (SbmGeo == ARBITRARY){
-            DistCalcType = KD_TREE;
-        }
-#endif
     }
 
-
-      if (bccaseType == BCCaseType::BOTTOM_FORCE)
-      {
-
-          BottomTract.read_from_config(cfg.getRoot()["BOTTOM_FORCE"]);
-
-          boundary_def[2].Traction(1) = BottomTract.traction; // y
-
-          boundary_def[1].disp_type = BoundaryDef::Disp_Type::SBM_ZERO_DIRICHLET;
-
-          if (SbmGeo == SBMGeo::NONE) {
-              boundary_def[2].disp_type = BoundaryDef::Disp_Type::NEUMANN;
-          } else if (SbmGeo == SBMGeo::cantilever){
-              boundary_def[2].disp_type =  (BottomTract.NeumannFromSBM)? BoundaryDef::Disp_Type::SBM_NEUMANN_WALL : BoundaryDef::Disp_Type::NEUMANN;
-          }
-      }
 
     /// timestep control
     ReadVectorOrValue("dt", dt);
@@ -720,53 +691,29 @@ private:
     /// If nothing specified stays stabilizedNS
     if (root.lookupValue(name, str))
     {
-      if (str == "RING")
-      {
-        return RING;
-      }
-      else if (str == "ROTATE")
-      {
-        return ROTATE;
-      }
-      else if (str == "SPHERE")
-      {
-        return SPHERE;
-      }
+        if(str == "PLANE")
+        {
+            return PLANE;
+        }
+        else if (str == "PLANT")
+        {
+            return PLANT;
+        }
+        else if (str == "EIFFEL")
+        {
+            return EIFFEL;
+        }
+        else if (str == "GYROID")
+        {
+            return GYROID;
+        }
       else if (str == "BUNNY")
       {
         return BUNNY;
       }
-      else if (str == "BUNNY3D")
-      {
-        return BUNNY3D;
-      }
-      else if (str == "STAR")
-      {
-        return STAR;
-      }
-      else if (str == "MOAI")
-      {
-        return MOAI;
-      }
-      else if (str == "ARM")
-      {
-        return ARM;
-      }
-      else if (str == "circle")
-      {
-        return CIRCLE;
-      }
       else if (str == "NONE")
       {
           return NONE;
-      }
-      else if (str == "cantilever")
-      {
-          return cantilever;
-      }
-      else if (str == "ARBITRARY")
-      {
-          return ARBITRARY;
       }
       else
       {
@@ -778,9 +725,8 @@ private:
 //      std::cout
 //          << "Must specify SBMGeo \n";
         PrintStatus("-------------------------------------");
-        PrintStatus("User do not set any SBMGeo");
+        PrintStatus("User do not set any SBMGeo, But this code is designed to run with SBMGeo for SPM25");
         PrintStatus("We set it as NONE");
-        PrintStatus("User please check inside the code to know more about this!");
         PrintStatus("-------------------------------------");
         return NONE;
 
@@ -897,7 +843,7 @@ private:
       }
       else if (str == "POSITION_DISPLACEMENT")
       {
-          PrintStatus("[LE BC case] POSITION_DISPLACEMENT");
+          PrintStatus("[LE BC case] POSITION_DISPLACEMENT; Everything is Setup at Code");
           return POSITION_DISPLACEMENT;
       }
       else

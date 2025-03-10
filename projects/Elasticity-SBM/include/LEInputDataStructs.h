@@ -360,6 +360,7 @@ struct RegionalRefine {
     CYLINDER = 2,
     MESHOBJECT = 10,
     MESHOBJECT_2D = 11,
+    DeepTrace = 12,
   };
   bool forRetain = false;
   // max refinement level
@@ -629,7 +630,12 @@ struct RegionalRefine {
       return MESHOBJECT;
     } else if (str == "meshobject_2d") {
       return MESHOBJECT_2D;
-    } else
+    }
+    else if( str == "deeptrace")
+    {
+        return DeepTrace;
+    }
+    else
       throw TALYFEMLIB::TALYException() << "Invalid Regional refinement type";
   }
 };
@@ -644,11 +650,14 @@ struct IBMGeomDef {
     MESHOBJECT_2D = 4,
     CYLINDER = 5,
     CUBE = 6,
+    DeepTrace = 7,
+
   };
   enum FileFormat {
     NOTKNOWN = 0,
     GMSH = 1,
     STL = 2,
+    NN = 3,
   };
   enum BCType {
     INVALID_BC = 0,
@@ -676,6 +685,8 @@ struct IBMGeomDef {
   std::string mesh_path;
   ///< name of the geometry (used for printing file and etc..)
   std::string name;
+  //// scale of the geometry only applicable in deeptrace
+    DENDRITE_REAL scale = 1.0;
   ///< level of gauss point split for triangles
   unsigned gp_level = 0;
   ///< file format depending on the file extension
@@ -758,6 +769,7 @@ struct IBMGeomDef {
 
 
   void read_from_config(const libconfig::Setting &root) {
+      /// for a deeptrace model it's a model path
     mesh_path = (const char *) root["mesh_path"];
     if (root.exists("name")) {
       name = (const char *) root["name"];
@@ -834,6 +846,10 @@ struct IBMGeomDef {
                               (double) root["dim"][1],
                               (double) root["dim"][2]);
         break;
+    case Type::DeepTrace:
+        // read just the scale
+        scale = (double) root["scale"];
+        break;
       default:assert(type == IBMGeomDef::MESHOBJECT || type == IBMGeomDef::MESHOBJECT_2D);
     }
 
@@ -841,52 +857,53 @@ struct IBMGeomDef {
 // for Linear elasticity (IBM)  --- start /////////////////////////
 
   
-  
-    const libconfig::Setting &bc_dof2 = root["bc_type_D"];
-    for (int i = 0; i < bc_dof2.getLength(); ++i) {
-      std::string a = bc_dof2[i];
-      IBMGeomDef::BCType temp = str_to_bctype(bc_dof2[i]);
-      bc_type_D.push_back(temp);
-    }
+  if(not type == IBMGeomDef::Type::DeepTrace) {
+      const libconfig::Setting &bc_dof2 = root["bc_type_D"];
+      for (int i = 0; i < bc_dof2.getLength(); ++i) {
+          std::string a = bc_dof2[i];
+          IBMGeomDef::BCType temp = str_to_bctype(bc_dof2[i]);
+          bc_type_D.push_back(temp);
+      }
 
-    int d_iter2 = 0, n_iter2 = 0, r_iter2 = 0, p_iter2=0,q_iter2=0;
-    for (int i = 0; i < bc_type_D.size(); i++) {
-      if (bc_type_D.at(i) == IBMGeomDef::BCType::DIRICHLET || bc_type_D.at(i) == IBMGeomDef::BCType::STRONG_Dirichlet){
-        const libconfig::Setting &temp1 = root["D_value"];
-        dirichlet_D.push_back(DENDRITE_REAL(temp1[d_iter2++]));
-        Tract_D.push_back(-100.0);
-        radial_D.push_back(-100.0);
-        t_radial_D.push_back(-100.0);
-        w_radial_D.push_back(-100.0);
+      int d_iter2 = 0, n_iter2 = 0, r_iter2 = 0, p_iter2 = 0, q_iter2 = 0;
+      for (int i = 0; i < bc_type_D.size(); i++) {
+          if (bc_type_D.at(i) == IBMGeomDef::BCType::DIRICHLET ||
+              bc_type_D.at(i) == IBMGeomDef::BCType::STRONG_Dirichlet) {
+              const libconfig::Setting &temp1 = root["D_value"];
+              dirichlet_D.push_back(DENDRITE_REAL(temp1[d_iter2++]));
+              Tract_D.push_back(-100.0);
+              radial_D.push_back(-100.0);
+              t_radial_D.push_back(-100.0);
+              w_radial_D.push_back(-100.0);
+          }
+          if (bc_type_D.at(i) == IBMGeomDef::BCType::NEUMANN) {
+              dirichlet_D.push_back(-100.0);
+              radial_D.push_back(-100.0);
+              t_radial_D.push_back(-100.0);
+              w_radial_D.push_back(-100.0);
+              const libconfig::Setting &temp2 = root["D_value"];
+              Tract_D.push_back(DENDRITE_REAL(temp2[n_iter2++]));
+          }
+          if (bc_type_D.at(i) == IBMGeomDef::BCType::T_RADIAL) {
+              dirichlet_D.push_back(-100.0);
+              Tract_D.push_back(-100.0);
+              radial_D.push_back(-100.0);
+              w_radial_D.push_back(-100.0);
+              const libconfig::Setting &temp4 = root["D_value"];
+              t_radial_D.push_back(DENDRITE_REAL(temp4[p_iter2++]));
+          }
+          if (bc_type_D.at(i) == IBMGeomDef::BCType::W_RADIAL ||
+              bc_type_D.at(i) == IBMGeomDef::BCType::SBM_NEUMANN_RADIAL) {
+              dirichlet_D.push_back(-100.0);
+              Tract_D.push_back(-100.0);
+              radial_D.push_back(-100.0);
+              t_radial_D.push_back(-100.0);
+              const libconfig::Setting &temp5 = root["D_value"];
+              w_radial_D.push_back(DENDRITE_REAL(temp5[q_iter2++]));
+          }
       }
-      if (bc_type_D.at(i) == IBMGeomDef::BCType::NEUMANN) {
-        dirichlet_D.push_back(-100.0);
-        radial_D.push_back(-100.0);
-        t_radial_D.push_back(-100.0);
-        w_radial_D.push_back(-100.0);        
-        const libconfig::Setting &temp2 = root["D_value"];
-        Tract_D.push_back(DENDRITE_REAL(temp2[n_iter2++]));
-      }
-      if (bc_type_D.at(i) == IBMGeomDef::BCType::T_RADIAL) {
-        dirichlet_D.push_back(-100.0);
-        Tract_D.push_back(-100.0);
-        radial_D.push_back(-100.0);
-        w_radial_D.push_back(-100.0);        
-        const libconfig::Setting &temp4 = root["D_value"];
-        t_radial_D.push_back(DENDRITE_REAL(temp4[p_iter2++]));
-      }
-      if (bc_type_D.at(i) == IBMGeomDef::BCType::W_RADIAL || bc_type_D.at(i) == IBMGeomDef::BCType::SBM_NEUMANN_RADIAL) {
-        dirichlet_D.push_back(-100.0);
-        Tract_D.push_back(-100.0);
-        radial_D.push_back(-100.0);
-        t_radial_D.push_back(-100.0);        
-        const libconfig::Setting &temp5 = root["D_value"];
-        w_radial_D.push_back(DENDRITE_REAL(temp5[q_iter2++]));
-      }
-    }
+  }
 /////////////////////////////////// for Linear elasticity (IBM) --- end ////////////////////////////////////////////////    
-    
-       
     
 
 
@@ -967,7 +984,10 @@ struct IBMGeomDef {
       return Type::MESHOBJECT;
     } else if (str == "meshobject_2d") {
       return Type::MESHOBJECT_2D;
-    } else {
+    } else if (str == "deeptrace") {
+      return Type::DeepTrace;
+    }
+    else {
       throw TALYFEMLIB::TALYException() << "Invalid geometry type '" << str
                                         << "' (expected sphere, pillar, cylinder cube or meshobject(2D) )";
     }
@@ -978,7 +998,11 @@ struct IBMGeomDef {
       return FileFormat::GMSH;
     } else if (str.substr(str.find_last_of('.') + 1) == "stl") {
       return FileFormat::STL;
-    } else {
+      //// for deeptrace onnx file format
+    } else if  (str.substr(str.find_last_of('.') + 1) == "onnx") {
+      return FileFormat::NN;
+    }
+    else {
       throw TALYFEMLIB::TALYException() << "Invalid file extension '" << str.substr(str.find_last_of('.') + 1)
                                         << "' (support .msh, .stl)";
     }
@@ -987,7 +1011,8 @@ struct IBMGeomDef {
   InoutTYPE type_to_iotype(const Type &type) const {
     if (type == Type::MESHOBJECT or type == Type::MESHOBJECT_2D) {
       return RT;
-    } else {
+    }
+    else {
       return PRIMITIVE;
     }
   }

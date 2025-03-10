@@ -4,7 +4,7 @@ totalT = 1
 ################# SBM #################
 RatioGPSBM = 1
 
-SBMGeo = "ARBITRARY"
+SBMGeo = "BUNNY"
 
 
 ################# LE #####################
@@ -28,7 +28,7 @@ radialbodyforce = {
 elemOrder = 1
 channel_mesh = {
   refine_lvl_base = 7
-  refine_lvl_channel_wall = 5
+  refine_lvl_channel_wall = 4
   enable_subda = false
   min = [0.0, 0.0, 0.0]
   max =[1.0,1.0,1.0]
@@ -38,24 +38,24 @@ channel_mesh = {
 model_path = "model.onnx"
 scale = 1.0
 
+/// this is different from NSHT
+geometries_ibm = (
+  {
+    mesh_path = "./model.onnx"
+    name = "bunny"
+    scale = 1.0
+    is_static = true
+    position = [0.0,0.0,0.0] # change pos
+    outer_boundary=true
+    type = "deeptrace"
+    refine_lvl = 8 # on the boundary
+  }
+)
+
 
 ### Coe setup
 Cb_e = 400
 
-/// this is different from NSHT
-geometries_ibm = (
-  {
-    mesh_path = "./new_refine.stl"
-    name = "beam"
-    is_static = true
-    position = [0.0,0.0,0.0] # change pos
-    outer_boundary=true
-    type = "meshobject"
-    refine_lvl = 8 # on the boundary
-    bc_type_D = ["dirichlet", "dirichlet","dirichlet"] # X,Y
-    D_value = [0.0, 0.0,0.0] # For Ashton: actually this does not matter
-  }
-)
 
 region_refine = (
 )
@@ -66,22 +66,6 @@ CheckpointInterval = 10
 
 #################### solver setting ####################
 solver_options_le = {
-  ksp_max_it = 8000
-ksp_type = "bcgs"
  pc_type = "lu"
 
- #ksp_type = "fgmres"
-  #pc_type = "gamg"
-  #pc_gamg_asm_use_agg = True
-  #mg_levels_ksp_type = "gmres"
-  #mg_levels_pc_type = "jacobi"
-  #mg_levels_pc_type = "sor"
-  #mg_levels_sub_pc_type = "lu"
-  #mg_levels_ksp_max_it = 40
-  ksp_rtol = 1e-15
-
-#  ksp_rtol = 1e-10
-  ksp_converged_reason = ""
-  ksp_monitor = ""
 }
-

@@ -212,38 +212,38 @@ void LEBCSetup::returnCarvedOutBoundary(PETSc::Boundary &b, const ZEROPTV &pos) 
         boundaries_->checkBoundaryType(BoundaryTypes::VOXEL::GEOMETRY)) {
         const auto &carved_geo = input_data_->ibm_geom_def.at(objectID);
 
-        if (carved_geo.bc_type_D[0] == IBMGeomDef::STRONG_Dirichlet) {
-
-            switch (input_data_->SbmGeo) {
-                case LEInputData::SBMGeo::CIRCLE: {
-
-
-                    double rad = 0.5;
-                    double radius_gp = sqrt((x - carved_geo.InitialDisplacement.x()) * (x - carved_geo.InitialDisplacement.x())
-                            + (y - carved_geo.InitialDisplacement.y()) * (y - carved_geo.InitialDisplacement.y()));
-                    double x_proj = (rad * (x - carved_geo.InitialDisplacement.x()) / radius_gp + carved_geo.InitialDisplacement.x());
-                    double y_proj = (rad * (y - carved_geo.InitialDisplacement.y()) / radius_gp + carved_geo.InitialDisplacement.y());
-                    DirichletBCValue[0] = sin(M_PI*x_proj)*cos(M_PI*y_proj)/10.0;
-                    DirichletBCValue[1] = cos(M_PI*x_proj)*sin(M_PI*y_proj)/10.0;
-
-                    DirichletHaveSet = true;
-                    break;
-                }
-            }
-
-            if (DirichletHaveSet) {
-
-                for (int dim = 0; dim < DIM; dim++) {
-                    b.addDirichlet(dim, DirichletBCValue[dim]);
-                }
-            } else {
-                b.addDirichlet(0, carved_geo.getBC_D(0)[0]); // x-dir displacement
-                b.addDirichlet(1, carved_geo.getBC_D(1)[0]); // y-dir displacement
-#if (DIM == 3)
-                b.addDirichlet(2, carved_geo.getBC_D(2)[0]); // z-dir displacement
-#endif
-            }
-        }
+//        if (carved_geo.bc_type_D[0] == IBMGeomDef::STRONG_Dirichlet) {
+//
+//            switch (input_data_->SbmGeo) {
+//                case LEInputData::SBMGeo::CIRCLE: {
+//
+//
+//                    double rad = 0.5;
+//                    double radius_gp = sqrt((x - carved_geo.InitialDisplacement.x()) * (x - carved_geo.InitialDisplacement.x())
+//                            + (y - carved_geo.InitialDisplacement.y()) * (y - carved_geo.InitialDisplacement.y()));
+//                    double x_proj = (rad * (x - carved_geo.InitialDisplacement.x()) / radius_gp + carved_geo.InitialDisplacement.x());
+//                    double y_proj = (rad * (y - carved_geo.InitialDisplacement.y()) / radius_gp + carved_geo.InitialDisplacement.y());
+//                    DirichletBCValue[0] = sin(M_PI*x_proj)*cos(M_PI*y_proj)/10.0;
+//                    DirichletBCValue[1] = cos(M_PI*x_proj)*sin(M_PI*y_proj)/10.0;
+//
+//                    DirichletHaveSet = true;
+//                    break;
+//                }
+//            }
+//
+//            if (DirichletHaveSet) {
+//
+//                for (int dim = 0; dim < DIM; dim++) {
+//                    b.addDirichlet(dim, DirichletBCValue[dim]);
+//                }
+//            } else {
+//                b.addDirichlet(0, carved_geo.getBC_D(0)[0]); // x-dir displacement
+//                b.addDirichlet(1, carved_geo.getBC_D(1)[0]); // y-dir displacement
+//#if (DIM == 3)
+//                b.addDirichlet(2, carved_geo.getBC_D(2)[0]); // z-dir displacement
+//#endif
+//            }
+//        }
 
     }
 }

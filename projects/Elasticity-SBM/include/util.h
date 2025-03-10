@@ -3,7 +3,6 @@
 #include <iostream>
 #include <DendriteUtils.h>
 #include <point.h>
-#include <TalyEquation.h>
 #include <PETSc/Solver/LinearSolver.h>
 #include <PETSc/PetscUtils.h>
 #include <IO/VTU.h>
@@ -1008,3 +1007,26 @@ namespace util_funcs
     }
 
 }
+////////// utility functions for Poisson problem
+////////// write into CSV file
+
+void WriteCSV(const std::string &filename, const std::vector<double> &data, const std::string &header) {
+    //// if there is no such file, create one
+    //// if there is a file, append to it
+
+    std::ofstream file;
+    file.open(filename, std::ios::app);
+    //// write header
+    if (file.tellp() == 0) {
+        file << header << "\n";
+    }
+    for (double i : data) {
+        file << i << ",";
+    }
+    file << "\n";
+    file.close();
+
+
+
+}
+

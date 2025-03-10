@@ -7,9 +7,6 @@
 #include "LEBCSetup.h"
 #include "SSLEEquation.h"
 #include <petscvec.h>
-#include <IMGALoop.h>
-#include "GetSurfaceGp.h"
-#include "GetTrueSurfaceGP.h"
 #include "CalcStress.h"
 #ifdef DEEPTRACE
 #include <onnxruntime_cxx_api.h>
@@ -17,14 +14,11 @@
 
 
 #pragma mark OptSug
-#include <CalcError.h>
 //#include "CheckSurface.h"
 #include "DACoarse.h"
 #include "DARefine.h"
 
-#ifdef DEEPTRACE
-#include <onnxruntime_cxx_api.h>
-#endif
+
 
 using namespace PETSc;
 
@@ -115,7 +109,15 @@ int main(int argc, char *argv[])
   SubDomain subDomain(domainExtents, resume_from_checkpoint);
 
 
-//    USING DEEP TRACE FOR GETTING THE MESH ###
+
+
+    if(inputData.ibm_geom_def[0].type != IBMGeomDef::Type::DeepTrace){
+        throw TALYFEMLIB::TALYException() << "The model is not a deeptrace model";
+    }
+
+    const auto &deepTrace = inputData.ibm_geom_def[0];
+
+    //    USING DEEP TRACE FOR GETTING THE MESH ###
     // Call the function you want to measure
 
     // Initialize the ONNX Runtime environment
@@ -124,8 +126,6 @@ int main(int argc, char *argv[])
     // Set up session options
     Ort::SessionOptions session_options;
     session_options.SetIntraOpNumThreads(1);
-
-
 
     // Create a session with the loaded model
     Ort::Session session(env, inputData.model_path, session_options);
@@ -136,23 +136,14 @@ int main(int argc, char *argv[])
 
 
 
-
     const auto geomDef = [&](const double *coords) {
-        //  if the coords is out of [-0.5,-0.5,-0.5] <> [0.5,0.5,0.5] then return OUT for
-        // the airplane
-        // compare it against the region inference and return the value
-        //  the region inference just have the top corner passing through the center of the cube
-
-        // if (coords[0] < -0.3 || coords[0] > 0.3 || coords[1] < -0.2 || coords[1] > 0.2 || coords[2] < -0.5 || coords[2] > 0.5) {
-        //     return ibm::Partition::OUT;
-        // }
 
 
-        float x = coords[0]*inputData.scale;
-        float y = coords[1]*inputData.scale;
+        float x = coords[0]*deepTrace.scale;
+        float y = coords[1]*deepTrace.scale;
         float z = 0.0; // Initialize z with 0.0 by default
 #if (DIM == 3)
-        z = coords[2]*inputData.scale;
+        z = coords[2]*deepTrace.scale;
 #endif
 
         // Prepare input tensor
@@ -174,7 +165,7 @@ int main(int argc, char *argv[])
 
         float dist = 0;
 
-        dist = floatarr[0]/inputData.scale;
+        dist = floatarr[0]/deepTrace.scale;
 
 
         if (dist > 0) {
@@ -205,11 +196,10 @@ int main(int argc, char *argv[])
 
     octDA = createSubDA(dTree, functionToRetain, levelBase, eleOrder);
     subDomain.finalize(octDA, dTree.getTreePartFiltered(), domainExtents);
+
     int no_refine = util_funcs::performRefinementSubDA(octDA, domainExtents, dTree, inputData, &subDomain);
 
     PrintStatus("Number of refinement = ", no_refine);
-
-
 
     TALYFEMLIB::PrintStatus("total No of nodes in the mesh = ", octDA->getGlobalNodeSz());
 
@@ -217,7 +207,6 @@ int main(int argc, char *argv[])
     const auto &treePartition = dTree.getTreePartFiltered();
     IO::writeBoundaryElements(octDA, treePartition, "boundary", "subDA", domainExtents);
 
-#pragma mark OptSug
     imga->initIMGAComputation(octDA, treePartition);
     Marker elementMarker(octDA, treePartition, domainExtents, imga, MarkerType::GAUSS_POINT);
 
@@ -225,9 +214,9 @@ int main(int argc, char *argv[])
     elementMarker_nodeBase.printMarker();
 
 
-  SubDomainBoundary boundary(&subDomain, octDA, domainExtents);
+    SubDomainBoundary boundary(&subDomain, octDA, domainExtents);
 
-  LEBCSetup LEBC(&boundary, &inputData);
+    LEBCSetup LEBC(&boundary, &inputData);
 
 
     Vec nodalFalseElement;
@@ -262,20 +251,6 @@ int main(int argc, char *argv[])
 
   leSolver->setIBMDirichletNodes(dirichletNodes); // it does not set anything (dirichletNodes do not have anything), but it is here to "prevent segmentation fault" !
 
-  if (inputData.bccaseType == BOTTOM_FORCE)
-  {
-    GetSurfaceGP getSurfaceGp1(octDA, dTree.getTreePartFiltered(),
-                               {VecInfo(leSolver->getCurrentSolution(), LENodeData::LE_DOF, LENodeData::UX)},
-                               domainExtents, subDomainBoundary, inputData, imga);
-    getSurfaceGp1.GetRegion(octDA->getCommActive(), inputData.DomainMax);
-  } else if (inputData.bccaseType == CSV_FORCE) {
-      //
-      GetSurfaceGP getSurfaceGp1(octDA, dTree.getTreePartFiltered(),
-                                 {VecInfo(leSolver->getCurrentSolution(), LENodeData::LE_DOF, LENodeData::UX)},
-                                 domainExtents, subDomainBoundary, inputData, imga);
-      getSurfaceGp1.GetMinMaxRegion(octDA->getCommActive(), inputData.DomainMin,inputData.DomainMax);
-
-  }
 
   inputData.solverOptionsLE.apply_to_petsc_options("-le_");
   {
@@ -292,17 +267,10 @@ int main(int argc, char *argv[])
                                             LEBC.setBoundaryConditions(b, pos);
                                             return b; });
 
-#pragma mark IBM-3D-moving
-//    leEq->assignIBMConstructs(imga, elementMarker);
-    leEq->setVectors({VecInfo(leSolver->getCurrentSolution(), LENodeData::LE_DOF, LENodeData::UX)},
-                       SYNC_TYPE::ALL);
 
   /// Calculate Cmatrix here
   inputData.Cmatrix.resize(3 * (DIM - 1));
   util_funcs::CalcCmatrix(&inputData, inputData.Cmatrix);
-
-  // TODO: put back optimal surrogate boundary and merge with thermoelasticity
-#pragma mark OptSug
 
   leEq->setVectors({VecInfo(nodalFalseElement, 1, LENodeData::NODE_ID)});
   leEq->assignIBMConstructs(imga, elementMarkers_withFalseIntercepted.data(), LENodeData::NODE_ID);
@@ -328,10 +296,6 @@ int main(int argc, char *argv[])
                              "le", varname,
                              subDomain.domainExtents(), false, false, ndof);
 
-
-
-
-  // TODO: fix the ordering in node data
   CalcStress calcStress(octDA, dTree.getTreePartFiltered(), {VecInfo(leSolver->getCurrentSolution(), LENodeData::LE_DOF, LENodeData::UX)}, domainExtents,
                         &subDomain, &inputData, ti);
 #if (DIM ==3)
@@ -346,18 +310,11 @@ int main(int argc, char *argv[])
 
   std::vector<double> StressVectorPerElement;
   calcStress.getElementalstress(StressVectorPerElement);
-  IO::writeVecTopVtu(octDA, dTree.getTreePartFiltered(), StressVectorPerElement.data(), "Stress",
+  IO::writeVecTopVtu(octDA, dTree.getTreePartFiltered(), StressVectorPerElement.data(), "results",
                      "Stress", stress_varname,
                      domainExtents, true, false, 6 * (DIM - 1) + 1);
 
   MPI_Barrier(MPI_COMM_WORLD); // here to make sure we at least have Stress output
-
-  /// L2 error
-  const auto analytic_sol = [](TALYFEMLIB::ZEROPTV pos, int dof, double time)
-  {
-    double r = sqrt(pow(pos.x() - 1, 2) + pow(pos.y() - 1, 2));
-    return -r * log(r) / 2 / log(2);
-  };
 
   Vec U_le = leSolver->getCurrentSolution();
 
@@ -365,33 +322,6 @@ int main(int argc, char *argv[])
 
   static const char *varname2[]{"Displacment"};
 
-
-#if (DIM == 2)
-    IS x_is, y_is;
-
-
-    ISCreate(PETSC_COMM_SELF, &x_is);
-
-
-    ISCreate(PETSC_COMM_SELF, &y_is);
-
-
-    Vec U_mag = util_funcs::GetMag(U_le, x_is, y_is);
-
-//    util_funcs::save_timestep(octDA, treePartition, U_mag, 1, ti, subDomain, "leMag", varname2);
-
-
-    VecInfo v(U_mag, 1, 0);
-
-
-    Analytic LEAnalytic(octDA, treePartition, v, analytic_sol, subDomain.domainExtents());
-
-
-    LEAnalytic.getL2error();
-
-#endif
-
-    std::cout << "-----------------" << std::endl;
 
 
 #if (DIM == 3)
@@ -401,7 +331,7 @@ int main(int argc, char *argv[])
   IS z_is;
   Vec U_mag = util_funcs::GetMag3D(U_le, x_is, y_is, z_is);
 
-  util_funcs::writeVecTopVtu(octDA, dTree.getTreePartFiltered(), leSolver->getCurrentSolution(), "results",
+  util_funcs::writeVecTopVtu(octDA, dTree.getTreePartFiltered(), U_mag, "results",
                              "U_mag", varname2,
                              subDomain.domainExtents(), false, false, ndof);
 
@@ -409,54 +339,6 @@ int main(int argc, char *argv[])
 
   MPI_Barrier(MPI_COMM_WORLD); // [fix the bug: missing some parts important
 
-#if (DIM == 2)
-  Vec U_x, U_y;
-  util_funcs::GetVec(U_le, x_is, y_is, U_x, U_y);
-  VecInfo vx(U_x, 1, 0);
-  VecInfo vy(U_y, 1, 0);
-#endif
-#if (DIM == 3)
-  Vec U_x, U_y, U_z;
-  util_funcs::GetVec(U_le, x_is, y_is, z_is, U_x, U_y, U_z);
-  VecInfo vx(U_x, 1, 0);
-  VecInfo vy(U_y, 1, 0);
-  VecInfo vz(U_z, 1, 0);
-#endif
-  VecInfo vle(U_le, LENodeData::LE_DOF, 0);
-
-
-
-
-
-  /// Domain error
-#pragma mark OptSug
-
-
-
-
-#if (DIM ==2)
-    double DomainError[2];
-    Marker *elementMarkerBaseOnNode = new Marker(octDA, dTree.getTreePartFiltered(), domainExtents, imga, MarkerType::ELEMENT_NODES);
-    inputData.CalcUxError = true;
-    CalcError calcErrorx(octDA, dTree.getTreePartFiltered(), vx, domainExtents, &subDomain, &inputData,elementMarkerBaseOnNode->getMarkers());
-    calcErrorx.getL2error(DomainError);
-    TALYFEMLIB::PrintStatus("[Domain Error] L2, Lf (x-dir) = ", DomainError[0], " ", DomainError[1]);
-    const auto &elemErrorX = calcErrorx.getElementalError();
-    static const char *varnameErrorX[]{"ErrorX"};
-    IO::writeVecTopVtu(octDA, dTree.getTreePartFiltered(), elemErrorX.data(), "Error", "ElemErrorX", varnameErrorX,
-                       domainExtents, true);
-
-
-    inputData.CalcUxError = false;
-    CalcError calcErrory(octDA, dTree.getTreePartFiltered(), vy, domainExtents, &subDomain, &inputData,elementMarkerBaseOnNode->getMarkers());
-    calcErrory.getL2error(DomainError);
-    TALYFEMLIB::PrintStatus("[Domain Error] L2, Lf (y-dir) = ", DomainError[0], " ", DomainError[1]);
-    const auto &elemErrorY = calcErrory.getElementalError();
-    static const char *varnameErrorY[]{"ErrorY"};
-    IO::writeVecTopVtu(octDA, dTree.getTreePartFiltered(), elemErrorY.data(), "Error", "ElemErrorY", varnameErrorY,
-                       domainExtents, true);
-
-#endif
 
   delete leEq;
   delete leSolver;
