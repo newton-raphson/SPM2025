@@ -46,16 +46,6 @@ public:
   void Integrands_Ae(const TALYFEMLIB::FEMElm &fe, TALYFEMLIB::ZeroMatrix<double> &Ae)
   {
 
-#ifndef NDEBUG
-    std::ofstream fout("testdomaingp_Ae.txt", std::ios::app);
-#if (DIM == 2)
-    fout << fe.position().x() << "," << fe.position().y() << "\n";
-#endif
-#if (DIM == 3)
-    fout << fe.position().x() << "," << fe.position().y() << "," << fe.position().z() << "\n";
-#endif
-    fout.close();
-#endif
     double thickness = 1;
 
     // # of dimensions: 1D, 2D, or 3D
@@ -72,7 +62,6 @@ public:
       CalcCmatrix(Cmatrix);
 
 
-#if (DIM == 2)
 
 //        const double detJxW = fe.detJxW();
 //    for (int a = 0; a < n_basis_functions; a++)
@@ -124,133 +113,12 @@ for(int a = 0; a < n_basis_functions; a++)
 } // end a
 
 
-#endif
 
-#if (DIM == 3)
-
-    //            std::vector<std::vector<double>> Ae_check(n_dimensions * n_basis_functions, std::vector<double>(n_dimensions * n_basis_functions));
-    //            std::vector<std::vector<double>> Be(n_dimensions * n_basis_functions, std::vector<double>(6));
-    //            CalcBe(fe,Be);
-    //
-    //            std::vector<std::vector<double>> BeCmatrix(n_dimensions * n_basis_functions, std::vector<double>(6));
-    //            CalcBeCmatrix(fe, Be, idata_->Cmatrix, BeCmatrix);
-    //
-    ////             for final term -> previous implementation!
-    //            for (int a = 0; a < n_dimensions * n_basis_functions; a++)
-    //            {
-    //                for (int b = 0; b < n_dimensions * n_basis_functions; b++)
-    //                {
-    ////                    Ae_check[a][b] = 0;
-    //                    for (int k = 0; k < 6; k++)
-    //                    {
-    //                        Ae(a, b) += BeCmatrix[a][k] * Be[b][k] * detJxW;
-    ////                        Ae_check[a][b] += BeCmatrix[a][k] * Be[b][k] * detJxW;
-    //                    }
-    //                }
-    //            }
-
-    /*
-     * below is from CalcAe3D.m.
-     * And, we try to know the pattern by ourselves
-     */
-    const double Emv = idata_->Cmatrix[0][0];
-    const double Ev = idata_->Cmatrix[1][0];
-    const double half = idata_->Cmatrix[3][3];
-    //
-    //    for (int i = 0; i < fe.nbf(); ++i) {
-    //        for (int j = 0; j < fe.nbf(); ++j) {
-    //            for (int k1 = 0; k1 < DIM; k1++) {
-    //                for (int k2 = 0; k2 < DIM; k2++) {
-    //                    // First type of element
-    //                    if (k1 == k2) {
-    //                        Ae(DIM * i + k1, DIM * j + k2) += Emv * fe.dN(i, k1) * fe.dN(j, k1) * detJxW;
-    ////                        Ae_check[DIM * i + k1][ DIM * j + k2]-= Emv * fe.dN(i, k1) * fe.dN(j, k1) * detJxW;
-    //                        if (k1 == 0) {
-    //                            Ae(DIM * i + k1, DIM * j + k2) +=
-    //                                    half * (fe.dN(i, 1) * fe.dN(j, 1) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
-    ////                            Ae_check[DIM * i + k1][ DIM * j + k2]-= half * (fe.dN(i, 1) * fe.dN(j, 1) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
-    //                        } else if (k1 == 1) {
-    //                            Ae(DIM * i + k1, DIM * j + k2) +=
-    //                                    half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
-    ////                            Ae_check[DIM * i + k1][ DIM * j + k2]-= half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
-    //                        } else if (k1 == 2) {
-    //                            Ae(DIM * i + k1, DIM * j + k2) +=
-    //                                    half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 1) * fe.dN(j, 1)) * detJxW;
-    ////                            Ae_check[DIM * i + k1][ DIM * j + k2]-= half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 1) * fe.dN(j, 1)) * detJxW;
-    //                        }
-    //                    }
-    //                        // Second type of element -> switch k1 and k2
-    //                    else {
-    //                        Ae(DIM * i + k1, DIM * j + k2) +=
-    //                                (Ev * fe.dN(i, k1) * fe.dN(j, k2) + half * fe.dN(i, k2) * fe.dN(j, k1)) * detJxW;
-    ////                        Ae_check[DIM * i + k1][ DIM * j + k2]-= (Ev * fe.dN(i, k1) * fe.dN(j, k2) + half * fe.dN(i, k2) * fe.dN(j, k1)) * detJxW;
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
-
-    const int nbf = fe.nbf();
-    for (int i = 0; i < nbf; ++i)
-    {
-      int DIM_i = DIM * i;
-
-      for (int j = 0; j < nbf; ++j)
-      {
-        int DIM_j = DIM * j;
-
-        for (int k1 = 0; k1 < DIM; k1++)
-        {
-          double dN_ik1 = fe.dN(i, k1); // Cache this value for k1 loop
-
-          for (int k2 = 0; k2 < DIM; k2++)
-          {
-            if (k1 == k2)
-            {
-              Ae(DIM_i + k1, DIM_j + k2) += Emv * dN_ik1 * fe.dN(j, k1) * detJxW;
-
-              switch (k1)
-              {
-              case 0:
-                Ae(DIM_i + k1, DIM_j + k2) +=
-                    half * (fe.dN(i, 1) * fe.dN(j, 1) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
-                break;
-              case 1:
-                Ae(DIM_i + k1, DIM_j + k2) +=
-                    half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
-                break;
-              case 2:
-                Ae(DIM_i + k1, DIM_j + k2) +=
-                    half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 1) * fe.dN(j, 1)) * detJxW;
-                break;
-              }
-            }
-            else
-            {
-              Ae(DIM_i + k1, DIM_j + k2) +=
-                  (Ev * dN_ik1 * fe.dN(j, k2) + half * fe.dN(i, k2) * fe.dN(j, k1)) * detJxW;
-            }
-          }
-        }
-      }
-    }
-
-#endif
   }
 
   void Integrands_be(const TALYFEMLIB::FEMElm &fe, TALYFEMLIB::ZEROARRAY<double> &be)
   {
 
-#ifndef NDEBUG
-      std::ofstream fout("testdomaingp_be.txt", std::ios::app);
-#if (DIM == 2)
-      fout << fe.position().x() << "," << fe.position().y() << "\n";
-#endif
-#if (DIM == 3)
-      fout << fe.position().x() << "," << fe.position().y() << "," << fe.position().z() << "\n";
-#endif
-      fout.close();
-#endif
 
     using namespace TALYFEMLIB;
     const ZEROPTV &p = fe.position();
@@ -689,9 +557,8 @@ for(int a = 0; a < n_basis_functions; a++)
 
           // x-dir
           for (int dim = 0; dim < DIM; dim++) {
-                  if (DirichletHaveSet) {
                       D_wall_(dim) = BCValue[dim];
-                  }
+
           }
 
 

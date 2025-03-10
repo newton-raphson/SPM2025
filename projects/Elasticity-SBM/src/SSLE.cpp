@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 
     /// --------------------------------------------------------------------------------------------------------------////
     const auto &treePartition = dTree.getTreePartFiltered();
-    IO::writeBoundaryElements(octDA, treePartition, "boundary", "subDA", domainExtents);
+    IO::writeBoundaryElements(octDA, dTree.getTreePartFiltered(), "boundary", "subDA", domainExtents);
 
     imga->initIMGAComputation(octDA, treePartition);
     Marker elementMarker(octDA, treePartition, domainExtents, imga, MarkerType::GAUSS_POINT);

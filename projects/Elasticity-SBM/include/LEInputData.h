@@ -304,6 +304,7 @@ public: // need to put the variable need to use in the other subroutine here!
     PLANE = 3,
     PLANT = 4,
     EIFFEL = 5,
+    SPHERE = 6,
     NONE = 5 // fix bug without the geometries
   };
   /// Declare the geo type of SBM
@@ -710,6 +711,10 @@ private:
       else if (str == "BUNNY")
       {
         return BUNNY;
+      }
+      else if (str == "SPHERE")
+      {
+        return SPHERE;
       }
       else if (str == "NONE")
       {
