@@ -515,6 +515,16 @@ for(int a = 0; a < n_basis_functions; a++)
     sbmCalc.GetBC(d, BCValue, bcType);
 //    sbmCalc.GetDirichletBC(d, BCValue, DirichletHaveSet);
 
+#ifndef  NDEBUG
+ZEROPTV true_points = {fe.position().x()+d[0],fe.position().y()+d[1],fe.position().z()+d[2]};
+ZEROPTV true_normal;
+      sbmCalc.NormalofGeo(true_normal,d);
+// write csv
+WriteCSV("true_points.csv", {true_points.x(), true_points.y(),true_points.z(),true_normal.x(),true_normal.y(),true_normal.z()},"X,Y,Z,NX,NY,NZ");
+
+
+#endif
+
     /// finish: calculate d vector ======================================================================
 
 
