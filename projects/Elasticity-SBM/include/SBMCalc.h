@@ -560,7 +560,7 @@ void SBMCalc::GetBC(const double (&d_)[DIM], double *BCValue, BCTypes &BCType) {
             } else {
                 BCValue[0] = 0.0;
                 BCValue[1] = 0.0;
-                BCValue[2] = 0.0;
+                BCValue[2] = -100.0;
                 BCType = BCTypes::NEUMANN;
                 break;
             }
