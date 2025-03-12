@@ -61,58 +61,168 @@ public:
       double Cmatrix[3 * (DIM - 1)][3 * (DIM - 1)];
       CalcCmatrix(Cmatrix);
 
+//
+//
+////        const double detJxW = fe.detJxW();
+////    for (int a = 0; a < n_basis_functions; a++)
+////    {
+////      for (int b = 0; b < n_basis_functions; b++)
+////      {
+////        for (int i = 0; i < DIM; i++)
+////        {
+////          for (int j = 0; j < DIM; j++)
+////          {
+////            Ae(DIM * a + i, DIM * b + j) += fe.dN(b, j) * idata_->Cmatrix[i][j] * fe.dN(a, i) * detJxW + fe.dN(b, DIM - j - 1) * idata_->Cmatrix[DIM][DIM] * fe.dN(a, DIM - i - 1) * detJxW;
+////          }
+////        }
+////      }
+////    }
+//
+//for(int a = 0; a < n_basis_functions; a++)
+//{ // loop over test basis functions (a)
+//    for(int b = 0; b < n_basis_functions; b++)
+//    { // loop over trial basis functions (b)
+//        for(int i = 0; i < DIM; i++) { // loop over DOF test function i
+//
+//            for (int k = 0; k < DIM; k++) { // loop over DOF trial function k
+//                for (int l = 0; l < DIM; l++) { // internal sum l
+//                    for (int j = 0; j < DIM; j++) { // internal sum j
+//                        Ae(DIM * a + i, DIM * b + k) +=
+//                                fe.dN(b, l) * Cmatrix[tensorToVoigt(i,j)][tensorToVoigt(k,l)] * fe.dN(a, j) * detJxW * 0.5;
+//                    } // end j
+//
+//                } // end l
+//
+//            } // end k
+//
+//            /////// symmetric part  //////
+//            for(int l = 0; l < DIM; l++) { // loop over DOF trial function l
+//                for (int k = 0; k < DIM; k++) { // internal sum k
+//                    for (int j = 0; j < DIM; j++) { // internal sum j
+//                        Ae(DIM * a + i, DIM * b + l) +=
+//                                fe.dN(b, k) * Cmatrix[tensorToVoigt(i,j)][tensorToVoigt(k,l)] * fe.dN(a, j) * detJxW * 0.5;
+//                    } // end j
+//
+//                } // end k
+//            } // end l
+//
+//
+//        } // end i
+//    } // end b
+//
+//} // end a
 
 
-//        const double detJxW = fe.detJxW();
-//    for (int a = 0; a < n_basis_functions; a++)
-//    {
-//      for (int b = 0; b < n_basis_functions; b++)
-//      {
-//        for (int i = 0; i < DIM; i++)
-//        {
-//          for (int j = 0; j < DIM; j++)
-//          {
-//            Ae(DIM * a + i, DIM * b + j) += fe.dN(b, j) * idata_->Cmatrix[i][j] * fe.dN(a, i) * detJxW + fe.dN(b, DIM - j - 1) * idata_->Cmatrix[DIM][DIM] * fe.dN(a, DIM - i - 1) * detJxW;
-//          }
-//        }
-//      }
-//    }
+#if (DIM == 3)
 
-for(int a = 0; a < n_basis_functions; a++)
-{ // loop over test basis functions (a)
-    for(int b = 0; b < n_basis_functions; b++)
-    { // loop over trial basis functions (b)
-        for(int i = 0; i < DIM; i++) { // loop over DOF test function i
+      //            std::vector<std::vector<double>> Ae_check(n_dimensions * n_basis_functions, std::vector<double>(n_dimensions * n_basis_functions));
+      //            std::vector<std::vector<double>> Be(n_dimensions * n_basis_functions, std::vector<double>(6));
+      //            CalcBe(fe,Be);
+      //
+      //            std::vector<std::vector<double>> BeCmatrix(n_dimensions * n_basis_functions, std::vector<double>(6));
+      //            CalcBeCmatrix(fe, Be, idata_->Cmatrix, BeCmatrix);
+      //
+      ////             for final term -> previous implementation!
+      //            for (int a = 0; a < n_dimensions * n_basis_functions; a++)
+      //            {
+      //                for (int b = 0; b < n_dimensions * n_basis_functions; b++)
+      //                {
+      ////                    Ae_check[a][b] = 0;
+      //                    for (int k = 0; k < 6; k++)
+      //                    {
+      //                        Ae(a, b) += BeCmatrix[a][k] * Be[b][k] * detJxW;
+      ////                        Ae_check[a][b] += BeCmatrix[a][k] * Be[b][k] * detJxW;
+      //                    }
+      //                }
+      //            }
 
-            for (int k = 0; k < DIM; k++) { // loop over DOF trial function k
-                for (int l = 0; l < DIM; l++) { // internal sum l
-                    for (int j = 0; j < DIM; j++) { // internal sum j
-                        Ae(DIM * a + i, DIM * b + k) +=
-                                fe.dN(b, l) * Cmatrix[tensorToVoigt(i,j)][tensorToVoigt(k,l)] * fe.dN(a, j) * detJxW * 0.5;
-                    } // end j
+      /*
+       * below is from CalcAe3D.m.
+       * And, we try to know the pattern by ourselves
+       */
+      const double Emv = idata_->Cmatrix[0][0];
+      const double Ev = idata_->Cmatrix[1][0];
+      const double half = idata_->Cmatrix[3][3];
+      //
+      //    for (int i = 0; i < fe.nbf(); ++i) {
+      //        for (int j = 0; j < fe.nbf(); ++j) {
+      //            for (int k1 = 0; k1 < DIM; k1++) {
+      //                for (int k2 = 0; k2 < DIM; k2++) {
+      //                    // First type of element
+      //                    if (k1 == k2) {
+      //                        Ae(DIM * i + k1, DIM * j + k2) += Emv * fe.dN(i, k1) * fe.dN(j, k1) * detJxW;
+      ////                        Ae_check[DIM * i + k1][ DIM * j + k2]-= Emv * fe.dN(i, k1) * fe.dN(j, k1) * detJxW;
+      //                        if (k1 == 0) {
+      //                            Ae(DIM * i + k1, DIM * j + k2) +=
+      //                                    half * (fe.dN(i, 1) * fe.dN(j, 1) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
+      ////                            Ae_check[DIM * i + k1][ DIM * j + k2]-= half * (fe.dN(i, 1) * fe.dN(j, 1) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
+      //                        } else if (k1 == 1) {
+      //                            Ae(DIM * i + k1, DIM * j + k2) +=
+      //                                    half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
+      ////                            Ae_check[DIM * i + k1][ DIM * j + k2]-= half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
+      //                        } else if (k1 == 2) {
+      //                            Ae(DIM * i + k1, DIM * j + k2) +=
+      //                                    half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 1) * fe.dN(j, 1)) * detJxW;
+      ////                            Ae_check[DIM * i + k1][ DIM * j + k2]-= half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 1) * fe.dN(j, 1)) * detJxW;
+      //                        }
+      //                    }
+      //                        // Second type of element -> switch k1 and k2
+      //                    else {
+      //                        Ae(DIM * i + k1, DIM * j + k2) +=
+      //                                (Ev * fe.dN(i, k1) * fe.dN(j, k2) + half * fe.dN(i, k2) * fe.dN(j, k1)) * detJxW;
+      ////                        Ae_check[DIM * i + k1][ DIM * j + k2]-= (Ev * fe.dN(i, k1) * fe.dN(j, k2) + half * fe.dN(i, k2) * fe.dN(j, k1)) * detJxW;
+      //                    }
+      //                }
+      //            }
+      //        }
+      //    }
 
-                } // end l
+      const int nbf = fe.nbf();
+      for (int i = 0; i < nbf; ++i)
+      {
+          int DIM_i = DIM * i;
 
-            } // end k
+          for (int j = 0; j < nbf; ++j)
+          {
+              int DIM_j = DIM * j;
 
-            /////// symmetric part  //////
-            for(int l = 0; l < DIM; l++) { // loop over DOF trial function l
-                for (int k = 0; k < DIM; k++) { // internal sum k
-                    for (int j = 0; j < DIM; j++) { // internal sum j
-                        Ae(DIM * a + i, DIM * b + l) +=
-                                fe.dN(b, k) * Cmatrix[tensorToVoigt(i,j)][tensorToVoigt(k,l)] * fe.dN(a, j) * detJxW * 0.5;
-                    } // end j
+              for (int k1 = 0; k1 < DIM; k1++)
+              {
+                  double dN_ik1 = fe.dN(i, k1); // Cache this value for k1 loop
 
-                } // end k
-            } // end l
+                  for (int k2 = 0; k2 < DIM; k2++)
+                  {
+                      if (k1 == k2)
+                      {
+                          Ae(DIM_i + k1, DIM_j + k2) += Emv * dN_ik1 * fe.dN(j, k1) * detJxW;
 
+                          switch (k1)
+                          {
+                              case 0:
+                                  Ae(DIM_i + k1, DIM_j + k2) +=
+                                          half * (fe.dN(i, 1) * fe.dN(j, 1) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
+                                  break;
+                              case 1:
+                                  Ae(DIM_i + k1, DIM_j + k2) +=
+                                          half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
+                                  break;
+                              case 2:
+                                  Ae(DIM_i + k1, DIM_j + k2) +=
+                                          half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 1) * fe.dN(j, 1)) * detJxW;
+                                  break;
+                          }
+                      }
+                      else
+                      {
+                          Ae(DIM_i + k1, DIM_j + k2) +=
+                                  (Ev * dN_ik1 * fe.dN(j, k2) + half * fe.dN(i, k2) * fe.dN(j, k1)) * detJxW;
+                      }
+                  }
+              }
+          }
+      }
 
-        } // end i
-    } // end b
-
-} // end a
-
-
+#endif
 
   }
 
@@ -417,7 +527,7 @@ for(int a = 0; a < n_basis_functions; a++)
                                   +weakBCpenaltyParameter_ * (fe.N(a) + gradWdotd + secondOrderTerm_a_)
                                   * (fe.N(b) + gradUdotd + secondOrderTerm_b_) * detSideJxW; // penalty
                       }
-                  } // b loop
+                  } // b loop`
               }   // a loop
 
 
@@ -485,7 +595,7 @@ for(int a = 0; a < n_basis_functions; a++)
           return;
       }
 
-    return;
+
 
   }
 
@@ -550,6 +660,8 @@ WriteCSV("true_points.csv", {true_points.x(), true_points.y(),true_points.z(),tr
 
       if (bcType == SBMCalc::BCTypes::DIRICHLET){
 
+          WriteCSV("dirichlet_be.csv", {fe.position().x(), fe.position().y(),fe.position().z(),BCValue[0],BCValue[1],BCValue[2]},"X,Y,Z,BCX,BCY,BCZ");
+
           CalcCmatrix(Cmatrix);
           CalcBe(fe, Be);
           CalcBeCmatrix(fe, Be, Cmatrix, BeCmatrix);
@@ -562,14 +674,6 @@ WriteCSV("true_points.csv", {true_points.x(), true_points.y(),true_points.z(),tr
 
           double weakBCpenaltyParameter_ = util_funcs::ReturnPenaltyParameters(idata_) * Cb_e / h;
 
-          // Dirichlet
-          ZEROPTV D_wall_;
-
-          // x-dir
-          for (int dim = 0; dim < DIM; dim++) {
-                      D_wall_(dim) = BCValue[dim];
-
-          }
 
 
           DENDRITE_REAL secondOrderTerm_a_(0);
@@ -606,7 +710,7 @@ WriteCSV("true_points.csv", {true_points.x(), true_points.y(),true_points.z(),tr
               for (int dim = 0; dim < DIM; dim++)
               {
                   be(a) +=
-                          StressDotSurrogateNormal[a][dim] * D_wall_(dim) * detSideJxW; // adjoint
+                          StressDotSurrogateNormal[a][dim] * BCValue[dim] * detSideJxW; // adjoint
               }
           }
 
@@ -620,7 +724,7 @@ WriteCSV("true_points.csv", {true_points.x(), true_points.y(),true_points.z(),tr
               for (int i = 0; i < DIM; i++)
               {
                   be(DIM * a + i) +=
-                          +weakBCpenaltyParameter_ * (fe.N(a) + gradWdotd + secondOrderTerm_a_) * D_wall_(i) * detSideJxW; // penalty
+                          +weakBCpenaltyParameter_ * (fe.N(a) + gradWdotd + secondOrderTerm_a_) * BCValue[i] * detSideJxW; // penalty
               }
           }
           return;
@@ -701,6 +805,32 @@ private:
       ForceHaveSet = false;
       break;
     }
+        case LEInputData::SBMGeo::SPHERE:
+        {
+            ///
+            double pi = M_PI;
+            double E = idata_->planeStress.young;
+            double v = idata_->planeStress.poisson;
+
+            ///
+            double x = p.x()+1;
+            double y = p.y()+1;
+            double z = p.z()+1;
+
+            ///
+            BodyForce.x() = (E * ((pow(pi, 2) * cos(pi * x) * sin(pi * y) * sin(pi * z)) / 20 + (pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z)) / 10) * (v - 0.5)) / ((2 * v - 1) * (v + 1)) - (E * v * pow(pi, 2) * cos(pi * x) * sin(pi * y) * sin(pi * z)) / (20 * (2 * v - 1) * (v + 1)) - (E * v * pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z)) / (10 * (2 * v - 1) * (v + 1)) + (E * pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z) * (v - 1)) / (10 * (2 * v - 1) * (v + 1)) + (E * pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z) * (v - 0.5)) / (5 * (2 * v - 1) * (v + 1));
+            BodyForce.y() = (E * ((pow(pi, 2) * cos(pi * x) * sin(pi * y) * sin(pi * z)) / 10 + (pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z)) / 20) * (v - 0.5)) / ((2 * v - 1) * (v + 1)) - (E * v * pow(pi, 2) * cos(pi * x) * sin(pi * y) * sin(pi * z)) / (10 * (2 * v - 1) * (v + 1)) - (E * v * pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z)) / (20 * (2 * v - 1) * (v + 1)) + (E * pow(pi, 2) * cos(pi * x) * sin(pi * y) * sin(pi * z) * (v - 1)) / (10 * (2 * v - 1) * (v + 1)) + (E * pow(pi, 2) * cos(pi * x) * sin(pi * y) * sin(pi * z) * (v - 0.5)) / (5 * (2 * v - 1) * (v + 1));
+            BodyForce.z() = (E * v * pow(pi, 2) * cos(pi * x) * cos(pi * y) * cos(pi * z)) / (5 * (2 * v - 1) * (v + 1)) - (2 * E * (v - 0.5) * ((pow(pi, 2) * cos(pi * x) * cos(pi * y) * cos(pi * z)) / 10 - (pow(pi, 2) * cos(pi * z) * sin(pi * x) * sin(pi * y)) / 20)) / ((2 * v - 1) * (v + 1)) + (E * pow(pi, 2) * cos(pi * z) * sin(pi * x) * sin(pi * y) * (v - 1)) / (20 * (2 * v - 1) * (v + 1));
+            ForceHaveSet = true;
+            break;
+        }
+        case LEInputData::SBMGeo::BUNNY:{
+            BodyForce.x() = 0;
+            BodyForce.y() = 0;
+            BodyForce.z() = -9800;
+            ForceHaveSet = true;
+            break;
+        }
 
     default:
     {
