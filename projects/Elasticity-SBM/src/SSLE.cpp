@@ -314,7 +314,6 @@ int main(int argc, char *argv[])
                      "Stress", stress_varname,
                      domainExtents, true, false, 6 * (DIM - 1) + 1);
 
-  MPI_Barrier(MPI_COMM_WORLD); // here to make sure we at least have Stress output
 
   Vec U_le = leSolver->getCurrentSolution();
 
@@ -339,9 +338,6 @@ int main(int argc, char *argv[])
                    "U_mag",varname2, domainExtents, false, false, ndof);
 
 #endif
-
-  MPI_Barrier(MPI_COMM_WORLD); // [fix the bug: missing some parts important
-
 
   delete leEq;
   delete leSolver;
