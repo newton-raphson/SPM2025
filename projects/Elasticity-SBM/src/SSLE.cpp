@@ -272,7 +272,7 @@ int main(int argc, char *argv[])
   inputData.Cmatrix.resize(3 * (DIM - 1));
   util_funcs::CalcCmatrix(&inputData, inputData.Cmatrix);
 
-  leEq->setVectors({VecInfo(nodalFalseElement, 1, LENodeData::NODE_ID)});
+//  leEq->setVectors({VecInfo(nodalFalseElement, 1, LENodeData::NODE_ID)});
   leEq->assignIBMConstructs(imga, elementMarkers_withFalseIntercepted.data(), LENodeData::NODE_ID);
 
   /// Solve
