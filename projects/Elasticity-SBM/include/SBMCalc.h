@@ -547,9 +547,9 @@ void SBMCalc::GetBC(const double (&d_)[DIM], double *BCValue, BCTypes &BCType) {
             /// we have three cases if z_true is below some value z1 we fix it
             /// if z_true is above some value z2 we apply the force
             /// else we apply the no traction BC
-            BCValue[0] = sin(M_PI * x_true) * cos(M_PI * y_true) / 5.0;  // Smooth oscillatory X-flow
-            BCValue[1] = cos(M_PI * x_true) * sin(M_PI * z_true) / 5.0;  // Cross-flow in Y
-            BCValue[2] = exp(-y_true * y_true) * sin(M_PI * z_true) / 10.0;  // Decaying vertical motion
+            BCValue[0] = sin(M_PI * x_true) * cos(M_PI * y_true) / 50.0;  // Smooth oscillatory X-flow
+            BCValue[1] = cos(M_PI * x_true) * sin(M_PI * z_true) / 50.0;  // Cross-flow in Y
+            BCValue[2] = exp(-y_true * y_true) * sin(M_PI * z_true) / 100.0;  // Decaying vertical motion
             BCType = BCTypes::DIRICHLET;
             break;
         }

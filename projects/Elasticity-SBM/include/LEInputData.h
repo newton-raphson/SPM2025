@@ -305,7 +305,7 @@ public: // need to put the variable need to use in the other subroutine here!
     PLANT = 4,
     EIFFEL = 5,
     SPHERE = 6,
-    NONE = 5 // fix bug without the geometries
+    NONE = 7 // fix bug without the geometries
   };
   /// Declare the geo type of SBM
   SBMGeo SbmGeo = NONE;

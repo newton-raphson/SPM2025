@@ -827,7 +827,14 @@ private:
         case LEInputData::SBMGeo::BUNNY:{
             BodyForce.x() = 0;
             BodyForce.y() = 0;
-            BodyForce.z() = 0.0;
+            BodyForce.z() = -4900;
+            ForceHaveSet = true;
+            break;
+        }
+        case LEInputData::SBMGeo::EIFFEL:{
+            BodyForce.x() = 0;
+            BodyForce.y() = 0;
+            BodyForce.z() = -2000;
             ForceHaveSet = true;
             break;
         }
