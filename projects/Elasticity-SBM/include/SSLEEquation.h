@@ -813,9 +813,9 @@ private:
             double v = idata_->planeStress.poisson;
 
             ///
-            double x = p.x()+1;
-            double y = p.y()+1;
-            double z = p.z()+1;
+            double x = p.x();
+            double y = p.y();
+            double z = p.z();
 
             ///
             BodyForce.x() = (E * ((pow(pi, 2) * cos(pi * x) * sin(pi * y) * sin(pi * z)) / 20 + (pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z)) / 10) * (v - 0.5)) / ((2 * v - 1) * (v + 1)) - (E * v * pow(pi, 2) * cos(pi * x) * sin(pi * y) * sin(pi * z)) / (20 * (2 * v - 1) * (v + 1)) - (E * v * pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z)) / (10 * (2 * v - 1) * (v + 1)) + (E * pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z) * (v - 1)) / (10 * (2 * v - 1) * (v + 1)) + (E * pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z) * (v - 0.5)) / (5 * (2 * v - 1) * (v + 1));
@@ -827,7 +827,7 @@ private:
         case LEInputData::SBMGeo::BUNNY:{
             BodyForce.x() = 0;
             BodyForce.y() = 0;
-            BodyForce.z() = -9800;
+            BodyForce.z() = 0.0;
             ForceHaveSet = true;
             break;
         }

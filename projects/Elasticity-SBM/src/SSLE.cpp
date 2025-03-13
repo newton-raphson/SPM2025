@@ -291,10 +291,10 @@ int main(int argc, char *argv[])
   PrintStatus("solved!");
   timers.PrintTotalTimeSeconds();
 
-
-  util_funcs::writeVecTopVtu(octDA, dTree.getTreePartFiltered(), leSolver->getCurrentSolution(), "results",
-                             "le", varname,
-                             subDomain.domainExtents(), false, false, ndof);
+    petscVectopvtu(octDA, dTree.getTreePartFiltered(), leSolver->getCurrentSolution(), "results",
+                   "le",varname, domainExtents, false, false, ndof);
+//  util_funcs::writeVecTopVtu(octDA, dTree.getTreePartFiltered(), leSolver->getCurrentSolution(), , varname,
+//                             subDomain.domainExtents(), false, false, );
 
   CalcStress calcStress(octDA, dTree.getTreePartFiltered(), {VecInfo(leSolver->getCurrentSolution(), LENodeData::LE_DOF, LENodeData::UX)}, domainExtents,
                         &subDomain, &inputData, ti);
@@ -331,9 +331,12 @@ int main(int argc, char *argv[])
   IS z_is;
   Vec U_mag = util_funcs::GetMag3D(U_le, x_is, y_is, z_is);
 
-  util_funcs::writeVecTopVtu(octDA, dTree.getTreePartFiltered(), U_mag, "results",
-                             "U_mag", varname2,
-                             subDomain.domainExtents(), false, false, ndof);
+//  util_funcs::writeVecTopVtu(octDA, dTree.getTreePartFiltered(), U_mag, "results",
+//                             "U_mag", varname2,
+//                             domainExtents, false, false, ndof);
+
+    petscVectopvtu(octDA, dTree.getTreePartFiltered(),U_mag, "results",
+                   "U_mag",varname2, domainExtents, false, false, ndof);
 
 #endif
 
