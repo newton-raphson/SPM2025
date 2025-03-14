@@ -146,6 +146,17 @@ int main(int argc, char *argv[])
         z = coords[2]*deepTrace.scale;
 #endif
 
+//        if the structure is SBMGeo GYROID
+if(inputData.SbmGeo == LEInputData::SBMGeo::GYROID) {
+
+    /// check the radius with axis along z-axis
+    double radius = sqrt(pow(x,2) + pow(y,2)); /// assuming the center is at (0,0)
+
+    if (radius > 0.5) {
+        return ibm::Partition::OUT;
+    }
+
+}
         // Prepare input tensor
         std::vector<float> input_tensor_values = {x, y, z};
         std::vector<int64_t> input_tensor_shape = {1, 3}; // Assuming the model expects a [1,3] shape tensor

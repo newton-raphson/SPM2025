@@ -370,7 +370,9 @@ public:
     ////////////
     if (bcType == SBMCalc::BCTypes::DIRICHLET)
       {
+#ifndef NDEBUG
           WriteCSV("dirichlet.csv", {fe.position().x(), fe.position().y(),fe.position().z(),BCValue[0],BCValue[1],BCValue[2]},"X,Y,Z,BCX,BCY,BCZ");
+#endif
           CalcCmatrix(Cmatrix);
           CalcBe(fe, Be);
           CalcBeCmatrix(fe, Be, Cmatrix, BeCmatrix);
@@ -535,8 +537,9 @@ public:
       }
     if (bcType == SBMCalc::BCTypes::NEUMANN)
       {
+#ifdef NDEBUG
         WriteCSV("neumann.csv", {fe.position().x(), fe.position().y(),fe.position().z(),BCValue[0],BCValue[1],BCValue[2]},"X,Y,Z,BCX,BCY,BCZ");
-
+#endif
           const ZEROPTV &p = fe.position();
           const ZEROPTV &SurrogateNormal = fe.surface()->normal();
 
@@ -660,8 +663,9 @@ WriteCSV("true_points.csv", {true_points.x(), true_points.y(),true_points.z(),tr
 
       if (bcType == SBMCalc::BCTypes::DIRICHLET){
 
+#ifdef NDEBUG
           WriteCSV("dirichlet_be.csv", {fe.position().x(), fe.position().y(),fe.position().z(),BCValue[0],BCValue[1],BCValue[2]},"X,Y,Z,BCX,BCY,BCZ");
-
+#endif
           CalcCmatrix(Cmatrix);
           CalcBe(fe, Be);
           CalcBeCmatrix(fe, Be, Cmatrix, BeCmatrix);
