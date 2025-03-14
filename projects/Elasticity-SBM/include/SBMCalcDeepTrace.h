@@ -27,7 +27,7 @@ private:
 
 public:
     SBMCalcDeepTrace( const TALYFEMLIB::FEMElm &fe, LEInputData *idata, const IMGA *imga, std::vector<my_kd_tree_t *> kd_trees, const int CarvedOutGeomID);
-
+    SBMCalcDeepTrace( const TALYFEMLIB::FEMElm &fe, LEInputData *idata, const IMGA *imga, std::vector<my_kd_tree_t *> kd_trees, const int CarvedOutGeomID,const char* input_name, const char* output_name, const char* model_path);
     void PtDist2Geo(const TALYFEMLIB::ZEROPTV &pt, double (&d)[DIM])
     {
 
@@ -61,7 +61,6 @@ public:
 SBMCalcDeepTrace::SBMCalcDeepTrace(const FEMElm &fe, LEInputData *idata, const IMGA *imga,
                                    std::vector<my_kd_tree_t *> kd_trees, const int CarvedOutGeomID)
         :SBMCalc(fe, idata, imga), deepTrace_(idata->model_path,idata->scale), fe_(fe){}
-
 
 
 //#if (DIM==2)

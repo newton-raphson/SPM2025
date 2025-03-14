@@ -133,7 +133,11 @@ int main(int argc, char *argv[])
     // Define names of the input and output tensors
     const char *input_name = "input"; // Replace with the actual input name obtained from the model
     const char *output_name = "output"; // Replace with the actual output name obtained from the model
+    if(inputData.SbmGeo == LEInputData::SBMGeo::GYROID) {
 
+        input_name = "onnx::Gemm_0"; // Replace with the actual input name obtained from the model
+        output_name = "46"; // Replace with the actual output name obtained from the model
+    }
 
     const auto geomDef = [&](const double *coords) {
 
