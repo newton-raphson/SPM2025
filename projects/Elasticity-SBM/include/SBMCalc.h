@@ -556,11 +556,11 @@ void SBMCalc::GetBC(const double (&d_)[DIM], double *BCValue, BCTypes &BCType) {
         case LEInputData::SBMGeo::PLANE: {
             /// if the y_value is less than -0.11 we fix the displacement
 //            if (y_true < -0.11) {
-                BCValue[0] = 0.1*x_true;
-                BCValue[1] = 0.0;
-                BCValue[2] = 0.0;
-                BCType = BCTypes::DIRICHLET;
-                break;
+//                BCValue[0] = 0.0;
+//                BCValue[1] = 0.0;
+//                BCValue[2] = 0.0;
+//                BCType = BCTypes::DIRICHLET;
+//                break;
 //            }
 //            //// above it we apply the neumann BC
 //            else
