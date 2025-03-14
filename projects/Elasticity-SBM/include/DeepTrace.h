@@ -55,7 +55,7 @@ DeepTrace::DeepTrace(const std::string& input_name, const std::string& output_na
 }
 
 DeepTrace::DeepTrace(const std::string& model_path, double scale)
-        : DeepTrace("onnx::Gemm_0", "46", model_path, scale) {}  // Delegate to main constructor
+        : DeepTrace("input", "output", model_path, scale) {}  // Delegate to main constructor
 
 double DeepTrace::compute_signed_distance(const double *coords) {
     // Scale the coordinates
