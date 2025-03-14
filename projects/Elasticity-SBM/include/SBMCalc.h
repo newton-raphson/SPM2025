@@ -555,22 +555,22 @@ void SBMCalc::GetBC(const double (&d_)[DIM], double *BCValue, BCTypes &BCType) {
         }
         case LEInputData::SBMGeo::PLANE: {
             /// if the y_value is less than -0.11 we fix the displacement
-            if (y_true < -0.11) {
-                BCValue[0] = 0.0;
-                BCValue[1] = 0.0;
-                BCValue[2] = 0.0;
-                BCType = BCTypes::DIRICHLET;
-                break;
-            }
-            //// above it we apply the neumann BC
-            else
-            {
-                BCValue[0] = 1000*cos(M_PI * x_true) * sin(M_PI * y_true);
-                BCValue[1] = 1000*sin(M_PI * x_true) * cos(M_PI * y_true);
-                BCValue[2] = -1000;
-                BCType = BCTypes::NEUMANN;
-                break;
-            }
+//            if (y_true < -0.11) {
+//                BCValue[0] = 0.0;
+//                BCValue[1] = 0.0;
+//                BCValue[2] = 0.0;
+//                BCType = BCTypes::DIRICHLET;
+//                break;
+//            }
+//            //// above it we apply the neumann BC
+//            else
+//            {
+//                BCValue[0] = 1000*cos(M_PI * x_true) * sin(M_PI * y_true);
+//                BCValue[1] = 1000*sin(M_PI * x_true) * cos(M_PI * y_true);
+//                BCValue[2] = -1000;
+//                BCType = BCTypes::NEUMANN;
+//                break;
+//            }
         }
         case LEInputData::SBMGeo::PLANT:
         {
@@ -581,9 +581,16 @@ void SBMCalc::GetBC(const double (&d_)[DIM], double *BCValue, BCTypes &BCType) {
         }
         case LEInputData::SBMGeo::GYROID:
         {
-            BCValue[0] = sin(M_PI*x_true)*cos(M_PI*y_true)/10.0;
-            BCValue[1] = cos(M_PI*x_true)*sin(M_PI*y_true)/10.0;
-            BCType = BCTypes::DIRICHLET;
+            /// Compute the radius at that position considering the axis is along z
+            double radius = std::sqrt(x_true*x_true + y_true*y_true);
+
+            /// Linearly varying displacement in radial direction
+            double scale = 0.01;  // Scaling factor to control displacement magnitude
+            BCValue[0] = scale * radius * (x_true / (radius + 1e-6));  // u_x
+            BCValue[1] = scale * radius * (y_true / (radius + 1e-6));  // u_y
+            BCValue[2] = 0.0;  // u_z
+
+            BCType = BCTypes::DIRICHLET;  // Applying displacement BC
             break;
         }
         case LEInputData::SBMGeo::EIFFEL:
