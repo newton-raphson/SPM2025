@@ -162,6 +162,11 @@ if(inputData.SbmGeo == LEInputData::SBMGeo::GYROID) {
     }
 
 }
+if(inputData.SbmGeo == LEInputData::SBMGeo::SPHERE) {
+    if(z< -0.8) {
+        return ibm::Partition::OUT;
+    }
+}
         // Prepare input tensor
         std::vector<float> input_tensor_values = {x, y, z};
         std::vector<int64_t> input_tensor_shape = {1, 3}; // Assuming the model expects a [1,3] shape tensor
