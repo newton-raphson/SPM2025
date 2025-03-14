@@ -1,0 +1,76 @@
+dt = 1
+totalT = 1
+
+################# SBM #################
+RatioGPSBM = 1
+
+SBMGeo = "PLANE"
+
+
+################# LE #####################
+LEcaseType = "planestrain"
+planestrain = {
+  young = 1e11
+  poisson = 0.3
+}
+
+LEBCcaseType = "POSITION_DISPLACEMENT"
+
+bodyforce_V = [0.0 , 0.0 , 0.0]
+
+radialbodyforce = {
+  BR_pow = 0.0
+  BR_v = 0.0
+}
+
+
+##########################
+elemOrder = 1
+channel_mesh = {
+  refine_lvl_base = 6
+  refine_lvl_channel_wall = 3 
+  enable_subda = false
+  min = [0.0, 0.0, 0.0]
+  max =[1.0,1.0,1.0]
+  refine_walls = true
+}
+
+model_path = "model.onnx"
+scale = 1.0
+
+/// this is different from NSHT
+geometries_ibm = (
+  {
+    mesh_path = "./model.onnx"
+    name = "bunny"
+    scale = 1.0
+    is_static = true
+    position = [0.0,0.0,0.0] # change pos
+    outer_boundary=true
+    type = "deeptrace"
+    refine_lvl = 10 # on the boundary
+  }
+)
+
+
+### Coe setup
+Cb_e = 400
+
+
+region_refine = (
+)
+
+OutputStartTime = 1e8
+OutputInterval = 1
+CheckpointInterval = 10
+
+#################### solver setting ####################
+#################### solver setting ####################
+solver_options_le = {
+  ksp_max_it = 2000
+  ksp_type = "bcgs"
+  pc_type = "lu"
+  ksp_rtol = 1e-10
+  ksp_converged_reason = ""
+  ksp_monitor = ""
+}

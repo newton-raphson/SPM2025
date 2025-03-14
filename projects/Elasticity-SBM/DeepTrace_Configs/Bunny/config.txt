@@ -27,8 +27,8 @@ radialbodyforce = {
 ##########################
 elemOrder = 1
 channel_mesh = {
-  refine_lvl_base = 7
-  refine_lvl_channel_wall = 4
+  refine_lvl_base = 5
+  refine_lvl_channel_wall = 5
   enable_subda = false
   min = [0.0, 0.0, 0.0]
   max =[1.0,1.0,1.0]
@@ -48,7 +48,7 @@ geometries_ibm = (
     position = [0.0,0.0,0.0] # change pos
     outer_boundary=true
     type = "deeptrace"
-    refine_lvl = 8 # on the boundary
+    refine_lvl = 9 # on the boundary
   }
 )
 
@@ -66,6 +66,10 @@ CheckpointInterval = 10
 
 #################### solver setting ####################
 solver_options_le = {
- pc_type = "lu"
-
+  ksp_max_it = 2000
+  ksp_type = "bcgs"
+  pc_type = "lu"
+  ksp_rtol = 1e-10
+  ksp_converged_reason = ""
+  ksp_monitor = ""
 }
