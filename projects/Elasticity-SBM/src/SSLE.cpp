@@ -135,7 +135,6 @@ int main(int argc, char *argv[])
     const char *output_name = "output"; // Replace with the actual output name obtained from the model
 
 
-
     const auto geomDef = [&](const double *coords) {
 
 
