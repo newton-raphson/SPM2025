@@ -298,6 +298,8 @@ public: // need to put the variable need to use in the other subroutine here!
   /// SBM geomtry type
   enum SBMGeo
   {
+      ///// add Circle for SPM2025 Paper ////
+
     ////// all this geometries are for SPM2025 Paper
     BUNNY = 1,
     GYROID = 2,
