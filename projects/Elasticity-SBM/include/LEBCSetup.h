@@ -204,13 +204,49 @@ void LEBCSetup::returnCarvedOutBoundary(PETSc::Boundary &b, const ZEROPTV &pos) 
     double y= pos.y();
 
     DENDRITE_UINT objectID = -1;
+    if (input_data_->SbmGeo== LEInputData::PLANT)
+    {
+        b.addDirichlet(0, sin(M_PI*x)*sin(M_PI*y)/100);
+        b.addDirichlet(1, cos(M_PI*x)*cos(M_PI*y)/100);
+        return;
+
+    }
     boundaries_->generateBoundaryFlags(pos, objectID);
     //std::cout << "NSHTNodeData::TEMPERATURE - NSHTNodeData::NS_DOF = " << NSHTNodeData::TEMPERATURE - NSHTNodeData::NS_DOF <<"\n";
     if (boundaries_->checkBoundaryType(BoundaryTypes::VOXEL::SPHERE) or
         boundaries_->checkBoundaryType(BoundaryTypes::VOXEL::CIRCLE) or
         boundaries_->checkBoundaryType(BoundaryTypes::VOXEL::BOX) or
-        boundaries_->checkBoundaryType(BoundaryTypes::VOXEL::GEOMETRY)) {
+        boundaries_->checkBoundaryType(BoundaryTypes::VOXEL::GEOMETRY) or
+    boundaries_->checkBoundaryType(BoundaryTypes::VOXEL::FUNCTION)){
         const auto &carved_geo = input_data_->ibm_geom_def.at(objectID);
+
+        return;
+
+        double dx = x - 1.0;
+        double dy = y - 1.0;
+        double radius_pt = std::sqrt(dx*dx + dy*dy);
+
+        // Signed distance (positive outside ring, negative inside inner hole)
+        double signed_distance = std::max(radius_pt - 1.0, 0.25 - radius_pt);
+
+
+        // Determine which circle is closer
+        double target_radius;
+        if (radius_pt < 0.25)
+            target_radius = 0.25;
+        else if (radius_pt > 1.0)
+            target_radius = 1.0;
+        else
+            target_radius = (radius_pt - 0.25 < 1.0 - radius_pt) ? 0.25 : 1.0;
+        double cosx = dx / radius_pt;
+        double sinx = dy / radius_pt;
+
+        if (target_radius == 1.0)
+        {
+            b.addDirichlet(0, -radius_pt * log(radius_pt) / 2 / log(2) * cosx);
+            b.addDirichlet(1, -radius_pt * log(radius_pt) / 2 / log(2) * sinx);
+
+        }
 
 //        if (carved_geo.bc_type_D[0] == IBMGeomDef::STRONG_Dirichlet) {
 //

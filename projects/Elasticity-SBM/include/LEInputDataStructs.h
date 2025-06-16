@@ -48,6 +48,16 @@ double maximum(std::array<DENDRITE_REAL, DIM> &array) {
   }
   return max;
 }
+double minimum(std::array<DENDRITE_REAL, DIM> &array)
+{
+  DENDRITE_REAL min = array[0];
+  for (int i = 1; i < DIM; i++)
+  {
+    if (array[i] < min)
+        min = array[i];
+  }
+  return min;
+}
 
 template<typename T>
 void PrintVector(std::ofstream &fstream, const std::string &name, const std::vector<T> &vec) {
@@ -189,6 +199,7 @@ struct MeshDef {
   DomainInfo physDomain;   /// The actual SubDAdomain
 
   std::array<DENDRITE_REAL, DIM> channel_max; ///< end of domain
+  std::array<DENDRITE_REAL, DIM> channel_min;
 
   ///< Dendro options
   DENDRITE_UINT refine_lvl_base;
@@ -206,6 +217,14 @@ struct MeshDef {
 #if (DIM == 3)
     channel_max[2] = (DENDRITE_REAL) root["max"][2];
 #endif
+
+    /// channel_min
+    channel_min[0] = (DENDRITE_REAL) root["min"][0];
+    channel_min[1] = (DENDRITE_REAL) root["min"][1];
+#if (DIM == 3)
+    channel_min[2] = (DENDRITE_REAL) root["min"][2];
+#endif
+
 
     if (!root.lookupValue("refine_walls", refine_walls)) {
       refine_walls = false;
@@ -233,16 +252,19 @@ struct MeshDef {
     PrintStatus("refine_lvl_channel_wall: ", refine_lvl_channel_wall);
 
     double sizeOfBox = maximum(channel_max);
+    double minimum_cube = minimum(channel_min);
 
-    fullDADomain.min.fill(-1.0);
+    fullDADomain.min.fill(minimum_cube);
     fullDADomain.max.fill(sizeOfBox);
 
-    /// Domain is [0,0.5] X [0,1]
-    /// For now carve only in the +X direction
-    physDomain.min.fill(-1.0);
+
+    physDomain.min[0] = channel_min[0];
+    physDomain.min[1] = channel_min[1];
+
     physDomain.max[0] = channel_max[0];
     physDomain.max[1] = channel_max[1];
 #if (DIM == 3)
+    physDomain.min[2] = channel_min[2];
     physDomain.max[2] = channel_max[2];
 #endif
 

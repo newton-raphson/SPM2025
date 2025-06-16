@@ -75,7 +75,10 @@ namespace PETSc {
       {
         Timer timer("ComputeVec");
 #endif
+        double start_time = MPI_Wtime();
         m_Vec->computeVec(m_vecSolution, m_vecRHS);
+        double total_time = MPI_Wtime() - start_time;
+        TALYFEMLIB::PrintStatus("Assembly Time = ",total_time);
 #ifdef PROFILING
       }
       PetscLogEventEnd(Profiling::vecElementalAssembly,0,0,0,0);

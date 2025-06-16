@@ -23,6 +23,7 @@ class SBMCalcDeepTrace: public SBMCalc
 {
 private:
     DeepTrace deepTrace_;
+    LEInputData* idata_;
     TALYFEMLIB::FEMElm fe_ = TALYFEMLIB::FEMElm(nullptr);
 
 public:
@@ -60,7 +61,7 @@ public:
 
 SBMCalcDeepTrace::SBMCalcDeepTrace(const FEMElm &fe, LEInputData *idata, const IMGA *imga,
                                    std::vector<my_kd_tree_t *> kd_trees, const int CarvedOutGeomID)
-        :SBMCalc(fe, idata, imga), deepTrace_(idata->model_path,idata->scale), fe_(fe){}
+        :SBMCalc(fe, idata, imga), idata_(idata),deepTrace_(idata->model_path,idata->scale), fe_(fe){}
 
 
 //#if (DIM==2)
@@ -82,7 +83,39 @@ SBMCalcDeepTrace::SBMCalcDeepTrace(const FEMElm &fe, LEInputData *idata, const I
 void SBMCalcDeepTrace::Dist2Geo(double (&d)[DIM]) {
     const TALYFEMLIB::ZEROPTV pt = fe_.position();
 
-    PtDist2Geo(pt, d);
+    if (idata_->SbmGeo == LEInputData::RING)
+    {
+        ///// let's use analytical circle for this as per Baskar's Request:
+        ///// signed distance field is sqrt(x[0]^2 + y[0]^2 +)
+        double dx = pt.x() - 1.0;
+        double dy = pt.y() - 1.0;
+        double radius_pt = std::sqrt(dx*dx + dy*dy);
+
+        // Signed distance (positive outside ring, negative inside inner hole)
+        double signed_distance = std::max(radius_pt - 1.0, 0.25 - radius_pt);
+
+
+        // Determine which circle is closer
+        double target_radius;
+        if (radius_pt < 0.25)
+            target_radius = 0.25;
+        else if (radius_pt > 1.0)
+            target_radius = 1.0;
+        else
+            target_radius = (radius_pt - 0.25 < 1.0 - radius_pt) ? 0.25 : 1.0;
+
+        // Closest point on the ring boundary
+        double px = 1.0 + dx * (target_radius / radius_pt);
+        double py = 1.0 + dy * (target_radius / radius_pt);
+
+        // Distance vector = closest point - current point
+        d[0] = px - pt.x();
+        d[1] = py - pt.y();
+
+        return;
+    }
+
+    // PtDist2Geo(pt, d);
 
 }
 

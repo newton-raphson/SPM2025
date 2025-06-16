@@ -61,23 +61,46 @@ public:
       double Cmatrix[3 * (DIM - 1)][3 * (DIM - 1)];
       CalcCmatrix(Cmatrix);
 
-//
-//
-////        const double detJxW = fe.detJxW();
-////    for (int a = 0; a < n_basis_functions; a++)
-////    {
-////      for (int b = 0; b < n_basis_functions; b++)
-////      {
-////        for (int i = 0; i < DIM; i++)
-////        {
-////          for (int j = 0; j < DIM; j++)
-////          {
-////            Ae(DIM * a + i, DIM * b + j) += fe.dN(b, j) * idata_->Cmatrix[i][j] * fe.dN(a, i) * detJxW + fe.dN(b, DIM - j - 1) * idata_->Cmatrix[DIM][DIM] * fe.dN(a, DIM - i - 1) * detJxW;
-////          }
-////        }
-////      }
-////    }
-//
+#ifndef NDEBUG
+      WriteCSV("volumetric.csv",{fe.position().x(),fe.position().y()},"x,y,x");
+#endif
+
+
+      for(int a = 0; a < n_basis_functions; a++)
+      { // loop over test basis functions (a)
+          for(int b = 0; b < n_basis_functions; b++)
+          { // loop over trial basis functions (b)
+              for(int i = 0; i < DIM; i++) { // loop over DOF test function i
+
+                  for (int k = 0; k < DIM; k++) { // loop over DOF trial function k
+                      for (int l = 0; l < DIM; l++) { // internal sum l
+                          for (int j = 0; j < DIM; j++) { // internal sum j
+                              Ae(DIM * a + i, DIM * b + k) +=
+                                      fe.dN(b, l) * Cmatrix[tensorToVoigt(i,j)][tensorToVoigt(k,l)] * fe.dN(a, j) * detJxW * 0.5;
+                          } // end j
+
+                      } // end l
+
+                  } // end k
+
+                  /////// symmetric part  //////
+                  for(int l = 0; l < DIM; l++) { // loop over DOF trial function l
+                      for (int k = 0; k < DIM; k++) { // internal sum k
+                          for (int j = 0; j < DIM; j++) { // internal sum j
+                              Ae(DIM * a + i, DIM * b + l) +=
+                                      fe.dN(b, k) * Cmatrix[tensorToVoigt(i,j)][tensorToVoigt(k,l)] * fe.dN(a, j) * detJxW * 0.5;
+                          } // end j
+
+                      } // end k
+                  } // end l
+
+
+              } // end i
+          } // end b
+
+      } // end a
+
+
 //for(int a = 0; a < n_basis_functions; a++)
 //{ // loop over test basis functions (a)
 //    for(int b = 0; b < n_basis_functions; b++)
@@ -177,50 +200,50 @@ public:
       //        }
       //    }
 
-      const int nbf = fe.nbf();
-      for (int i = 0; i < nbf; ++i)
-      {
-          int DIM_i = DIM * i;
-
-          for (int j = 0; j < nbf; ++j)
-          {
-              int DIM_j = DIM * j;
-
-              for (int k1 = 0; k1 < DIM; k1++)
-              {
-                  double dN_ik1 = fe.dN(i, k1); // Cache this value for k1 loop
-
-                  for (int k2 = 0; k2 < DIM; k2++)
-                  {
-                      if (k1 == k2)
-                      {
-                          Ae(DIM_i + k1, DIM_j + k2) += Emv * dN_ik1 * fe.dN(j, k1) * detJxW;
-
-                          switch (k1)
-                          {
-                              case 0:
-                                  Ae(DIM_i + k1, DIM_j + k2) +=
-                                          half * (fe.dN(i, 1) * fe.dN(j, 1) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
-                                  break;
-                              case 1:
-                                  Ae(DIM_i + k1, DIM_j + k2) +=
-                                          half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
-                                  break;
-                              case 2:
-                                  Ae(DIM_i + k1, DIM_j + k2) +=
-                                          half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 1) * fe.dN(j, 1)) * detJxW;
-                                  break;
-                          }
-                      }
-                      else
-                      {
-                          Ae(DIM_i + k1, DIM_j + k2) +=
-                                  (Ev * dN_ik1 * fe.dN(j, k2) + half * fe.dN(i, k2) * fe.dN(j, k1)) * detJxW;
-                      }
-                  }
-              }
-          }
-      }
+      // const int nbf = fe.nbf();
+      // for (int i = 0; i < nbf; ++i)
+      // {
+      //     int DIM_i = DIM * i;
+      //
+      //     for (int j = 0; j < nbf; ++j)
+      //     {
+      //         int DIM_j = DIM * j;
+      //
+      //         for (int k1 = 0; k1 < DIM; k1++)
+      //         {
+      //             double dN_ik1 = fe.dN(i, k1); // Cache this value for k1 loop
+      //
+      //             for (int k2 = 0; k2 < DIM; k2++)
+      //             {
+      //                 if (k1 == k2)
+      //                 {
+      //                     Ae(DIM_i + k1, DIM_j + k2) += Emv * dN_ik1 * fe.dN(j, k1) * detJxW;
+      //
+      //                     switch (k1)
+      //                     {
+      //                         case 0:
+      //                             Ae(DIM_i + k1, DIM_j + k2) +=
+      //                                     half * (fe.dN(i, 1) * fe.dN(j, 1) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
+      //                             break;
+      //                         case 1:
+      //                             Ae(DIM_i + k1, DIM_j + k2) +=
+      //                                     half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 2) * fe.dN(j, 2)) * detJxW;
+      //                             break;
+      //                         case 2:
+      //                             Ae(DIM_i + k1, DIM_j + k2) +=
+      //                                     half * (fe.dN(i, 0) * fe.dN(j, 0) + fe.dN(i, 1) * fe.dN(j, 1)) * detJxW;
+      //                             break;
+      //                     }
+      //                 }
+      //                 else
+      //                 {
+      //                     Ae(DIM_i + k1, DIM_j + k2) +=
+      //                             (Ev * dN_ik1 * fe.dN(j, k2) + half * fe.dN(i, k2) * fe.dN(j, k1)) * detJxW;
+      //                 }
+      //             }
+      //         }
+      //     }
+      // }
 
 #endif
 
@@ -247,7 +270,7 @@ public:
     double BR_V = idata_->radialbodyforce.br_v;
     int BR_POW = idata_->radialbodyforce.br_pow;
 
-//      BodyForce.print();
+      // BodyForce.print();
 
     /*
      * please write something like this so that it can support both 2D and 3D
@@ -368,173 +391,279 @@ public:
     /// for mid2 term => B_T*C_T*n
     std::vector<std::vector<double>> StressDotSurrogateNormal(DIM * n_basis_functions);
     ////////////
-    if (bcType == SBMCalc::BCTypes::DIRICHLET)
+      /////////////////////////////////// BCType 1: Dirichlet SBM /////////////////////////////////////////////
+      if(bcType == SBMCalc::BCTypes::DIRICHLET)
       {
-#ifndef NDEBUG
-          WriteCSV("dirichlet.csv", {fe.position().x(), fe.position().y(),fe.position().z(),BCValue[0],BCValue[1],BCValue[2]},"X,Y,Z,BCX,BCY,BCZ");
-#endif
-          CalcCmatrix(Cmatrix);
-          CalcBe(fe, Be);
-          CalcBeCmatrix(fe, Be, Cmatrix, BeCmatrix);
-          CalcSurrogateNormalMatrix(fe, SurrogateNormalMatrix);
-          CalcStressDotNormal(fe, BeCmatrix, SurrogateNormalMatrix, StressDotSurrogateNormal); // (DIM*fe.nbf()) * DIM
-
-          double Ne_[DIM][DIM * n_basis_functions];
-          memset(Ne_, 0.0, sizeof Ne_);
-          double Ne_con_[DIM][DIM * n_basis_functions];
-          memset(Ne_con_, 0.0, sizeof Ne_con_);
-
-          DENDRITE_REAL secondOrderTerm_a_(0);
-          for (int j = 0; j < n_basis_functions; j++)
-          {
-              // secondOrderTerm_a = d[0] * (fe.d2N(j, 0, 0) * d[0] + fe.d2N(j, 0, 1) * d[1]) + d[1] * (fe.d2N(j, 1, 0) * d[0] + fe.d2N(j, 1, 1) * d[1]) / 2;
-              double gradWdotd = 0.0;
-              for (int dim = 0; dim < DIM; dim++)
-              {
-                  gradWdotd += fe.dN(j, dim) * d[dim];
-              }
-
-              for (int dim = 0; dim < DIM; dim++)
-              {
-                  for (int dim2 = 0; dim2 < DIM; dim2++)
-                  {
-                      if (dim2 == dim)
-                      {
-                          Ne_[dim][DIM * j + dim2] = fe.N(j) + gradWdotd + secondOrderTerm_a_
-                                  /*TODO: fix small issue here when we use QBF*/;
-                      }
-                      else
-                      {
-                          Ne_[dim][DIM * j + dim2] = 0.0;
-                      }
-                  }
-              }
-          }
-          for (int j = 0; j < n_basis_functions; j++)
-          {
-              for (int dim = 0; dim < DIM; dim++)
-              {
-                  for (int dim2 = 0; dim2 < DIM; dim2++)
-                  {
-                      if (dim2 == dim)
-                      {
-                          Ne_con_[dim][DIM * j + dim2] = fe.N(j);
-                      }
-                      else
-                      {
-                          Ne_con_[dim][DIM * j + dim2] = 0.0;
-                      }
-                  }
-              }
-          }
-
-          // for Final term => B_T*C_T*n*N
-          const double detJxW = fe.detJxW();
-          for (int a = 0; a < DIM * n_basis_functions; a++)
-          {
-              for (int b = 0; b < DIM * n_basis_functions; b++)
-              {
-                  double N = 0;
-                  double N_con = 0;
-                  // StressDotSurrogateNormal -> (DIM*fe.nbf()) * DIM
-                  for (int k = 0; k < DIM; k++)
-                  {
-                      N += StressDotSurrogateNormal[a][k] * Ne_[k][b] * detJxW;
-                      N_con += StressDotSurrogateNormal[a][k] * Ne_con_[k][b] * detJxW;
-                  }
-                  // Ae is symmetric
-
-                  Ae(a, b) += N; // adjoint consistency
-
-                  Ae(b, a) -= N_con; // consistency
-              }
-          }
-
-              DENDRITE_REAL  secondOrderTerm_b_(0);
+ //////////////////////////////////////////////////////////////////////////////
+          const ZEROPTV SurrogateNormal = fe.surface()->normal();
+            ////////// consisitency term (subtracted in LHS)//////
+            for(int a=0; a<fe.nbf(); a++)
+            { // loop over test basis functions (a)
+                for(int b=0; b<fe.nbf(); b++)
+                { // loop over trial basis functions (b)
+                    for(int i=0; i<DIM; i++)
+                    { // loop over DOF test function i
+                        for(int k=0; k<DIM; k++)
+                        { // loop over DOF trial function j
+                            for(int j=0; j<DIM; j++)
+                            { // loop over internal sum j
+                                for(int l=0; l<DIM; l++)
+                                { // loop over internal sum l
+                                    Ae(DIM*a+i, DIM*b+k) -= Cmatrix[tensorToVoigt(i,j)][tensorToVoigt(k,l)] * fe.N(a) * fe.dN(b,l) * SurrogateNormal(j)* detSideJxW*0.5;
+                                } // end l
+                            } // end j
+                        } // end k
+                        for(int l=0; l<DIM; l++)
+                        { // loop over DOF trial function j
+                            for(int j=0; j<DIM; j++)
+                            { // loop over internal sum j
+                                for(int k =0; k<DIM; k++)
+                                { // loop over internal sum k
+                                    Ae(DIM*a+i, DIM*b+l) -= Cmatrix[tensorToVoigt(i,j)][tensorToVoigt(k,l)] * fe.N(a) * fe.dN(b,k) * SurrogateNormal(j)* detSideJxW * 0.5;
+                                } // end k
 
 
-          double weakBCpenaltyParameter_ = util_funcs::ReturnPenaltyParameters(idata_) * Cb_e / h;
+                            } // end j
 
-              for (int a = 0; a < fe.nbf(); a++)
-              {
-#if (DIM == 2)
-                  if (idata_->elemOrder == 2 && idata_->ifHessian)
-          {
-            secondOrderTerm_a_ = (d[0] * (fe.d2N(a, 0, 0) * d[0] + fe.d2N(a, 0, 1) * d[1]) +
-                                 d[1] * (fe.d2N(a, 1, 0) * d[0] + fe.d2N(a, 1, 1) * d[1])) /
-                                2;
-          }
-          else
-          {
-            secondOrderTerm_a_ = 0;
-          }
-#endif
+                        } // end l
 
-#if (DIM == 3)
-                  if (idata_->elemOrder == 2 && idata_->ifHessian)
-                  {
 
-                      secondOrderTerm_a_ = (d[0] * (fe.d2N(a, 0, 0) * d[0] + fe.d2N(a, 0, 1) * d[1] + fe.d2N(a, 0, 2) * d[2]) + d[1] * (fe.d2N(a, 1, 0) * d[0] + fe.d2N(a, 1, 1) * d[1] + fe.d2N(a, 1, 2) * d[2]) + d[2] * (fe.d2N(a, 2, 0) * d[0] + fe.d2N(a, 2, 1) * d[1] + fe.d2N(a, 2, 2) * d[2])) / 2;
-                  }
-                  else
-                  {
-                      secondOrderTerm_a_ = 0;
-                  }
-#endif
+                    } // end i
+                } // end b
+            } // end a
 
-                  double gradWdotd = 0.0;
-                  for (int k = 0; k < DIM; k++)
-                  {
-                      gradWdotd += fe.dN(a, k) * d[k];
-                  }
+            /////////// adjoint consistency term (added in LHS) //////
 
-                  for (int b = 0; b < fe.nbf(); b++)
-                  {
-#if (DIM == 2)
-                      if (idata_->elemOrder == 2 && idata_->ifHessian)
+            // it will include two parts to maintain the symmetry of the strain tensor
+            // we are trying to calculate the following term
+            // C_{ijkl}(\del_l wk + \del_k wl)) * \tilde{n}_j * (u_i + \del_p u_i * d_p)
+            for(int a=0; a<fe.nbf(); a++) /// test basis functions a loop begin
             {
-              secondOrderTerm_b_ = (d[0] * (fe.d2N(b, 0, 0) * d[0] + fe.d2N(b, 0, 1) * d[1]) +
-                                   d[1] * (fe.d2N(b, 1, 0) * d[0] + fe.d2N(b, 1, 1) * d[1])) /
-                                  2;
-            }
-            else
+                for (int b = 0; b < fe.nbf(); b++) /// trial basis functions b loop begin
+                {
+                    double grad_u_dot_d = 0.0; //// u + \grad u * d
+                    //// \sum_p N_b + \del_p N_b *d_p is same for all the test basis function
+                    for (int p = 0; p < DIM; p++) { //// loop over the dimensions in p
+                        grad_u_dot_d += fe.dN(b, p) * d[p];
+                    } //// loop over the dimensions in p ends
+
+                    for (int i = 0; i < DIM; i++) { /// loop over the dimensions in k for test basis function dof
+                        for (int k = 0; k < DIM; k++) { /// loop over the dimensions in i    for trial basis function dof
+
+                            for (int j = 0; j < DIM; j++) { /// loop over the dimensions in j for summation
+                                for (int l = 0; l < DIM; l++) /// loop over the dimensions in l for summation
+                                {
+                                    Ae(DIM * a + i, DIM * b + k) +=
+                                            Cmatrix[tensorToVoigt(i, j)][tensorToVoigt(k, l)] * fe.dN(a, j) *
+                                            SurrogateNormal(l) *
+                                            (grad_u_dot_d+fe.N(b)) * detSideJxW;
+                                } /// l loop ends
+                            } /// j loop ends
+                        } /// i loop ends
+                    } /// k loop ends
+
+                } /// trial basis function b loop ends
+
+
+            } /// test basis function a loop ends
+
+            double weakBCpenaltyParameter_ =util_funcs::ReturnPenaltyParameters(idata_) * Cb_e / h;
+            //////////// penalty term //////////////////////////////
+            for(int a =0; a<fe.nbf(); a++)
             {
-              secondOrderTerm_b_ = 0;
+                double grad_w_dot_d = 0.0; //// w + \grad w * d
+                for (int p = 0; p < DIM; p++)
+                { //// loop over the dimensions in p
+                    grad_w_dot_d +=  fe.dN(a, p) * d[p];
+                } //// loop over the dimensions in p ends
+
+                for(int b=0; b<fe.nbf(); b++)
+                {
+                    double grad_u_dot_d = 0.0; //// u + \grad u * d
+
+                    for (int p = 0; p < DIM; p++)
+                    { //// loop over the dimensions in p
+                        grad_u_dot_d +=  fe.dN(b, p) * d[p];
+
+                    } //// loop over the dimensions in p ends
+                    for(int i=0; i<DIM; i++)
+                    {
+
+                        Ae(DIM*a+i, DIM*b+i) += weakBCpenaltyParameter_ * (fe.N(a)+grad_w_dot_d)* (fe.N(b)+grad_u_dot_d)* detSideJxW;
+                    }
+                }
             }
-#endif
 
-#if (DIM == 3)
-                      if (idata_->elemOrder == 2 && idata_->ifHessian)
-                      {
+            return;
 
-                          secondOrderTerm_b_ = (d[0] * (fe.d2N(b, 0, 0) * d[0] + fe.d2N(b, 0, 1) * d[1] + fe.d2N(b, 0, 2) * d[2]) + d[1] * (fe.d2N(b, 1, 0) * d[0] + fe.d2N(b, 1, 1) * d[1] + fe.d2N(b, 1, 2) * d[2]) + d[2] * (fe.d2N(b, 2, 0) * d[0] + fe.d2N(b, 2, 1) * d[1] + fe.d2N(b, 2, 2) * d[2])) / 2;
-                      }
-                      else
-                      {
-                          secondOrderTerm_b_ = 0;
-                      }
-#endif
-                      double gradUdotd = 0.0;
-                      for (int k = 0; k < DIM; k++)
-                      {
-                          gradUdotd += fe.dN(b, k) * d[k];
-                      }
-
-                      /*
-                       *  make it j to match with what's inside Navier-Stokes
-                       */
-                      for (int j = 0; j < DIM; j++)
-                      {
-                          Ae(DIM * a + j, DIM * b + j) +=
-                                  +weakBCpenaltyParameter_ * (fe.N(a) + gradWdotd + secondOrderTerm_a_)
-                                  * (fe.N(b) + gradUdotd + secondOrderTerm_b_) * detSideJxW; // penalty
-                      }
-                  } // b loop`
-              }   // a loop
-
-
-          return;
       }
+//     if (bcType == SBMCalc::BCTypes::DIRICHLET)
+//       {
+// #ifndef NDEBUG
+//           WriteCSV("dirichlet.csv", {fe.position().x(), fe.position().y(),fe.position().z(),BCValue[0],BCValue[1],BCValue[2]},"X,Y,Z,BCX,BCY,BCZ");
+// #endif
+//           CalcCmatrix(Cmatrix);
+//           CalcBe(fe, Be);
+//           CalcBeCmatrix(fe, Be, Cmatrix, BeCmatrix);
+//           CalcSurrogateNormalMatrix(fe, SurrogateNormalMatrix);
+//           CalcStressDotNormal(fe, BeCmatrix, SurrogateNormalMatrix, StressDotSurrogateNormal); // (DIM*fe.nbf()) * DIM
+//
+//           double Ne_[DIM][DIM * n_basis_functions];
+//           memset(Ne_, 0.0, sizeof Ne_);
+//           double Ne_con_[DIM][DIM * n_basis_functions];
+//           memset(Ne_con_, 0.0, sizeof Ne_con_);
+//
+//           DENDRITE_REAL secondOrderTerm_a_(0);
+//           for (int j = 0; j < n_basis_functions; j++)
+//           {
+//               // secondOrderTerm_a = d[0] * (fe.d2N(j, 0, 0) * d[0] + fe.d2N(j, 0, 1) * d[1]) + d[1] * (fe.d2N(j, 1, 0) * d[0] + fe.d2N(j, 1, 1) * d[1]) / 2;
+//               double gradWdotd = 0.0;
+//               for (int dim = 0; dim < DIM; dim++)
+//               {
+//                   gradWdotd += fe.dN(j, dim) * d[dim];
+//               }
+//
+//               for (int dim = 0; dim < DIM; dim++)
+//               {
+//                   for (int dim2 = 0; dim2 < DIM; dim2++)
+//                   {
+//                       if (dim2 == dim)
+//                       {
+//                           Ne_[dim][DIM * j + dim2] = fe.N(j) + gradWdotd + secondOrderTerm_a_
+//                                   /*TODO: fix small issue here when we use QBF*/;
+//                       }
+//                       else
+//                       {
+//                           Ne_[dim][DIM * j + dim2] = 0.0;
+//                       }
+//                   }
+//               }
+//           }
+//           for (int j = 0; j < n_basis_functions; j++)
+//           {
+//               for (int dim = 0; dim < DIM; dim++)
+//               {
+//                   for (int dim2 = 0; dim2 < DIM; dim2++)
+//                   {
+//                       if (dim2 == dim)
+//                       {
+//                           Ne_con_[dim][DIM * j + dim2] = fe.N(j);
+//                       }
+//                       else
+//                       {
+//                           Ne_con_[dim][DIM * j + dim2] = 0.0;
+//                       }
+//                   }
+//               }
+//           }
+//
+//           // for Final term => B_T*C_T*n*N
+//           const double detJxW = fe.detJxW();
+//           for (int a = 0; a < DIM * n_basis_functions; a++)
+//           {
+//               for (int b = 0; b < DIM * n_basis_functions; b++)
+//               {
+//                   double N = 0;
+//                   double N_con = 0;
+//                   // StressDotSurrogateNormal -> (DIM*fe.nbf()) * DIM
+//                   for (int k = 0; k < DIM; k++)
+//                   {
+//                       N += StressDotSurrogateNormal[a][k] * Ne_[k][b] * detJxW;
+//                       N_con += StressDotSurrogateNormal[a][k] * Ne_con_[k][b] * detJxW;
+//                   }
+//                   // Ae is symmetric
+//
+//                   Ae(a, b) += N; // adjoint consistency
+//
+//                   Ae(b, a) -= N_con; // consistency
+//               }
+//           }
+//
+//               DENDRITE_REAL  secondOrderTerm_b_(0);
+//
+//
+//           double weakBCpenaltyParameter_ = util_funcs::ReturnPenaltyParameters(idata_) * Cb_e / h;
+//
+//               for (int a = 0; a < fe.nbf(); a++)
+//               {
+// #if (DIM == 2)
+//                   if (idata_->elemOrder == 2 && idata_->ifHessian)
+//           {
+//             secondOrderTerm_a_ = (d[0] * (fe.d2N(a, 0, 0) * d[0] + fe.d2N(a, 0, 1) * d[1]) +
+//                                  d[1] * (fe.d2N(a, 1, 0) * d[0] + fe.d2N(a, 1, 1) * d[1])) /
+//                                 2;
+//           }
+//           else
+//           {
+//             secondOrderTerm_a_ = 0;
+//           }
+// #endif
+//
+// #if (DIM == 3)
+//                   if (idata_->elemOrder == 2 && idata_->ifHessian)
+//                   {
+//
+//                       secondOrderTerm_a_ = (d[0] * (fe.d2N(a, 0, 0) * d[0] + fe.d2N(a, 0, 1) * d[1] + fe.d2N(a, 0, 2) * d[2]) + d[1] * (fe.d2N(a, 1, 0) * d[0] + fe.d2N(a, 1, 1) * d[1] + fe.d2N(a, 1, 2) * d[2]) + d[2] * (fe.d2N(a, 2, 0) * d[0] + fe.d2N(a, 2, 1) * d[1] + fe.d2N(a, 2, 2) * d[2])) / 2;
+//                   }
+//                   else
+//                   {
+//                       secondOrderTerm_a_ = 0;
+//                   }
+// #endif
+//
+//                   double gradWdotd = 0.0;
+//                   for (int k = 0; k < DIM; k++)
+//                   {
+//                       gradWdotd += fe.dN(a, k) * d[k];
+//                   }
+//
+//                   for (int b = 0; b < fe.nbf(); b++)
+//                   {
+// #if (DIM == 2)
+//                       if (idata_->elemOrder == 2 && idata_->ifHessian)
+//             {
+//               secondOrderTerm_b_ = (d[0] * (fe.d2N(b, 0, 0) * d[0] + fe.d2N(b, 0, 1) * d[1]) +
+//                                    d[1] * (fe.d2N(b, 1, 0) * d[0] + fe.d2N(b, 1, 1) * d[1])) /
+//                                   2;
+//             }
+//             else
+//             {
+//               secondOrderTerm_b_ = 0;
+//             }
+// #endif
+//
+// #if (DIM == 3)
+//                       if (idata_->elemOrder == 2 && idata_->ifHessian)
+//                       {
+//
+//                           secondOrderTerm_b_ = (d[0] * (fe.d2N(b, 0, 0) * d[0] + fe.d2N(b, 0, 1) * d[1] + fe.d2N(b, 0, 2) * d[2]) + d[1] * (fe.d2N(b, 1, 0) * d[0] + fe.d2N(b, 1, 1) * d[1] + fe.d2N(b, 1, 2) * d[2]) + d[2] * (fe.d2N(b, 2, 0) * d[0] + fe.d2N(b, 2, 1) * d[1] + fe.d2N(b, 2, 2) * d[2])) / 2;
+//                       }
+//                       else
+//                       {
+//                           secondOrderTerm_b_ = 0;
+//                       }
+// #endif
+//                       double gradUdotd = 0.0;
+//                       for (int k = 0; k < DIM; k++)
+//                       {
+//                           gradUdotd += fe.dN(b, k) * d[k];
+//                       }
+//
+//                       /*
+//                        *  make it j to match with what's inside Navier-Stokes
+//                        */
+//                       for (int j = 0; j < DIM; j++)
+//                       {
+//                           Ae(DIM * a + j, DIM * b + j) +=
+//                                   +weakBCpenaltyParameter_ * (fe.N(a) + gradWdotd + secondOrderTerm_a_)
+//                                   * (fe.N(b) + gradUdotd + secondOrderTerm_b_) * detSideJxW; // penalty
+//                       }
+//                   } // b loop`
+//               }   // a loop
+//
+//
+//           return;
+//       }
     if (bcType == SBMCalc::BCTypes::NEUMANN)
       {
 #ifdef NDEBUG
@@ -663,74 +792,116 @@ WriteCSV("true_points.csv", {true_points.x(), true_points.y(),true_points.z(),tr
 
       if (bcType == SBMCalc::BCTypes::DIRICHLET){
 
-#ifdef NDEBUG
+#ifndef NDEBUG
           WriteCSV("dirichlet_be.csv", {fe.position().x(), fe.position().y(),fe.position().z(),BCValue[0],BCValue[1],BCValue[2]},"X,Y,Z,BCX,BCY,BCZ");
 #endif
-          CalcCmatrix(Cmatrix);
-          CalcBe(fe, Be);
-          CalcBeCmatrix(fe, Be, Cmatrix, BeCmatrix);
-          double SurrogateNormalMatrix[DIM][3 * (DIM - 1)];
-          CalcSurrogateNormalMatrix(fe, SurrogateNormalMatrix);
+           CalcCmatrix(Cmatrix);
+          const ZEROPTV SurrogateNormal = fe.surface()->normal();
+          const double detSideJxW = fe.detJxW();
+//           CalcBe(fe, Be);
+//           CalcBeCmatrix(fe, Be, Cmatrix, BeCmatrix);
+//           double SurrogateNormalMatrix[DIM][3 * (DIM - 1)];
+//           CalcSurrogateNormalMatrix(fe, SurrogateNormalMatrix);
+//
+//           // for mid2 term => B_T*C_T*n
+//           std::vector<std::vector<double>> StressDotSurrogateNormal(DIM * n_basis_functions);
+//           CalcStressDotNormal(fe, BeCmatrix, SurrogateNormalMatrix, StressDotSurrogateNormal);
+//
+//           double weakBCpenaltyParameter_ = util_funcs::ReturnPenaltyParameters(idata_) * Cb_e / h;
+//
+//
+//
+//           DENDRITE_REAL secondOrderTerm_a_(0);
+//           for (int a = 0; a < fe.nbf(); a++)
+//           {
+// #if (DIM == 2)
+//               if (idata_->elemOrder == 2 && idata_->ifHessian)
+//         {
+//           secondOrderTerm_a_ = (d[0] * (fe.d2N(a, 0, 0) * d[0] + fe.d2N(a, 0, 1) * d[1]) +
+//                                d[1] * (fe.d2N(a, 1, 0) * d[0] + fe.d2N(a, 1, 1) * d[1])) /
+//                               2;
+//         }
+//         else
+//         {
+//           secondOrderTerm_a_ = 0;
+//         }
+// #endif
+//
+// #if (DIM == 3)
+//               if (idata_->elemOrder == 2 && idata_->ifHessian)
+//               {
+//
+//                   secondOrderTerm_a_ = (d[0] * (fe.d2N(a, 0, 0) * d[0] + fe.d2N(a, 0, 1) * d[1] + fe.d2N(a, 0, 2) * d[2]) + d[1] * (fe.d2N(a, 1, 0) * d[0] + fe.d2N(a, 1, 1) * d[1] + fe.d2N(a, 1, 2) * d[2]) + d[2] * (fe.d2N(a, 2, 0) * d[0] + fe.d2N(a, 2, 1) * d[1] + fe.d2N(a, 2, 2) * d[2])) / 2;
+//               }
+//               else
+//               {
+//                   secondOrderTerm_a_ = 0;
+//               }
+// #endif
+//           }
+//
+//           for (int a = 0; a < DIM * n_basis_functions; a++)
+//           {
+//               for (int dim = 0; dim < DIM; dim++)
+//               {
+//                   be(a) +=
+//                           StressDotSurrogateNormal[a][dim] * BCValue[dim] * detSideJxW; // adjoint
+//               }
+//           }
+//
+//           for (int a = 0; a < n_basis_functions; a++)
+//           {
+//               double gradWdotd = 0.0;
+//               for (int k = 0; k < DIM; k++)
+//               {
+//                   gradWdotd += fe.dN(a, k) * d[k];
+//               }
+//               for (int i = 0; i < DIM; i++)
+//               {
+//                   be(DIM * a + i) +=
+//                           +weakBCpenaltyParameter_ * (fe.N(a) + gradWdotd + secondOrderTerm_a_) * BCValue[i] * detSideJxW; // penalty
+//               }
+//           }
 
-          // for mid2 term => B_T*C_T*n
-          std::vector<std::vector<double>> StressDotSurrogateNormal(DIM * n_basis_functions);
-          CalcStressDotNormal(fe, BeCmatrix, SurrogateNormalMatrix, StressDotSurrogateNormal);
+          ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-          double weakBCpenaltyParameter_ = util_funcs::ReturnPenaltyParameters(idata_) * Cb_e / h;
+          for(int a =0; a<fe.nbf(); a++){
+              for(int i=0; i<DIM; i++){
+                  for(int j=0; j<DIM; j++){
+                      for(int k=0; k<DIM; k++){
+                          for(int l=0; l<DIM; l++){
+                              be(a*DIM+i) += BCValue[k]* Cmatrix[tensorToVoigt(i, j)][tensorToVoigt(k, l)] * fe.dN(a, j)  * SurrogateNormal[l] * detSideJxW;
+                          }
+                      }
+                  }
+              }
+              //                for(int j=0; j<DIM; j++){
+              //                    for(int i=0; i<DIM; i++){
+              //                        for(int k=0; k<DIM; k++){
+              //                            for(int l=0; l<DIM; l++){
+              //                                be(a*DIM+j) -= BCValue[k]* Cmatrix[tensorToVoigt(j, k)][tensorToVoigt(i, l)] * fe.dN(a, i)  * SurrogateNormal[l] * detSideJxW*0.5;
+              //                            }
+              //                        }
+              //                    }
+              //                }
 
-
-
-          DENDRITE_REAL secondOrderTerm_a_(0);
+          }
+          double weakBCpenaltyParameter_ = util_funcs::ReturnPenaltyParameters(idata_) * Cb_e/ElementSize(fe);
           for (int a = 0; a < fe.nbf(); a++)
-          {
-#if (DIM == 2)
-              if (idata_->elemOrder == 2 && idata_->ifHessian)
-        {
-          secondOrderTerm_a_ = (d[0] * (fe.d2N(a, 0, 0) * d[0] + fe.d2N(a, 0, 1) * d[1]) +
-                               d[1] * (fe.d2N(a, 1, 0) * d[0] + fe.d2N(a, 1, 1) * d[1])) /
-                              2;
-        }
-        else
-        {
-          secondOrderTerm_a_ = 0;
-        }
-#endif
-
-#if (DIM == 3)
-              if (idata_->elemOrder == 2 && idata_->ifHessian)
-              {
-
-                  secondOrderTerm_a_ = (d[0] * (fe.d2N(a, 0, 0) * d[0] + fe.d2N(a, 0, 1) * d[1] + fe.d2N(a, 0, 2) * d[2]) + d[1] * (fe.d2N(a, 1, 0) * d[0] + fe.d2N(a, 1, 1) * d[1] + fe.d2N(a, 1, 2) * d[2]) + d[2] * (fe.d2N(a, 2, 0) * d[0] + fe.d2N(a, 2, 1) * d[1] + fe.d2N(a, 2, 2) * d[2])) / 2;
-              }
-              else
-              {
-                  secondOrderTerm_a_ = 0;
-              }
-#endif
-          }
-
-          for (int a = 0; a < DIM * n_basis_functions; a++)
-          {
-              for (int dim = 0; dim < DIM; dim++)
-              {
-                  be(a) +=
-                          StressDotSurrogateNormal[a][dim] * BCValue[dim] * detSideJxW; // adjoint
-              }
-          }
-
-          for (int a = 0; a < n_basis_functions; a++)
           {
               double gradWdotd = 0.0;
               for (int k = 0; k < DIM; k++)
               {
                   gradWdotd += fe.dN(a, k) * d[k];
               }
+
               for (int i = 0; i < DIM; i++)
               {
                   be(DIM * a + i) +=
-                          +weakBCpenaltyParameter_ * (fe.N(a) + gradWdotd + secondOrderTerm_a_) * BCValue[i] * detSideJxW; // penalty
+                          +weakBCpenaltyParameter_ * (fe.N(a) + gradWdotd) * BCValue[i] * detSideJxW; // penalty
               }
           }
+          return;
           return;
       }
 
@@ -809,12 +980,30 @@ private:
       ForceHaveSet = false;
       break;
     }
+    case LEInputData::SBMGeo::PLANT:
+        {
+            ForceHaveSet = true;
+            ///
+            double x = p.x();
+            double y = p.y();
+            double z = p.z();
+            double pi = M_PI;
+            double E = idata_->planeStrain.young;
+            double nu = idata_->planeStrain.poisson;
+            BodyForce.x()= -E*(pi*pi*(3*nu + 2)*sin(pi*x)*sin(pi*y)
+                + pi*pi*nu*cos(pi*x)*cos(pi*y))/
+                (100*(1 + nu)*(1 - 2*nu));
+            BodyForce.y() = -E*(pi*pi*(3*nu + 2)*cos(pi*x)*cos(pi*y)
+                + pi*pi*nu*sin(pi*x)*sin(pi*y))/
+                (100*(1 + nu)*(1 - 2*nu));
+            break;
+        }
         case LEInputData::SBMGeo::SPHERE:
         {
             ///
             double pi = M_PI;
-            double E = idata_->planeStress.young;
-            double v = idata_->planeStress.poisson;
+            double lam = idata_->lame.lamda;
+            double mu = idata_->lame.mu;
 
             ///
             double x = p.x();
@@ -822,9 +1011,9 @@ private:
             double z = p.z();
 
             ///
-            BodyForce.x() = (E * ((pow(pi, 2) * cos(pi * x) * sin(pi * y) * sin(pi * z)) / 20 + (pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z)) / 10) * (v - 0.5)) / ((2 * v - 1) * (v + 1)) - (E * v * pow(pi, 2) * cos(pi * x) * sin(pi * y) * sin(pi * z)) / (20 * (2 * v - 1) * (v + 1)) - (E * v * pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z)) / (10 * (2 * v - 1) * (v + 1)) + (E * pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z) * (v - 1)) / (10 * (2 * v - 1) * (v + 1)) + (E * pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z) * (v - 0.5)) / (5 * (2 * v - 1) * (v + 1));
-            BodyForce.y() = (E * ((pow(pi, 2) * cos(pi * x) * sin(pi * y) * sin(pi * z)) / 10 + (pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z)) / 20) * (v - 0.5)) / ((2 * v - 1) * (v + 1)) - (E * v * pow(pi, 2) * cos(pi * x) * sin(pi * y) * sin(pi * z)) / (10 * (2 * v - 1) * (v + 1)) - (E * v * pow(pi, 2) * cos(pi * y) * sin(pi * x) * sin(pi * z)) / (20 * (2 * v - 1) * (v + 1)) + (E * pow(pi, 2) * cos(pi * x) * sin(pi * y) * sin(pi * z) * (v - 1)) / (10 * (2 * v - 1) * (v + 1)) + (E * pow(pi, 2) * cos(pi * x) * sin(pi * y) * sin(pi * z) * (v - 0.5)) / (5 * (2 * v - 1) * (v + 1));
-            BodyForce.z() = (E * v * pow(pi, 2) * cos(pi * x) * cos(pi * y) * cos(pi * z)) / (5 * (2 * v - 1) * (v + 1)) - (2 * E * (v - 0.5) * ((pow(pi, 2) * cos(pi * x) * cos(pi * y) * cos(pi * z)) / 10 - (pow(pi, 2) * cos(pi * z) * sin(pi * x) * sin(pi * y)) / 20)) / ((2 * v - 1) * (v + 1)) + (E * pow(pi, 2) * cos(pi * z) * sin(pi * x) * sin(pi * y) * (v - 1)) / (20 * (2 * v - 1) * (v + 1));
+            BodyForce.x() = -1.0/10.0*lam*pow(pi, 2)*sin(pi*x)*sin(pi*y)*sin(pi*z) + (1.0/5.0)*mu*pow(pi, 2)*sin(pi*x)*sin(pi*y)*sin(pi*z);
+            BodyForce.y() = (1.0/10.0)*lam*pow(pi, 2)*sin(pi*z)*cos(pi*x)*cos(pi*y) + (2.0/5.0)*mu*pow(pi, 2)*sin(pi*z)*cos(pi*x)*cos(pi*y);
+            BodyForce.z() =  (1.0/10.0)*lam*pow(pi, 2)*sin(pi*y)*cos(pi*x)*cos(pi*z) + (2.0/5.0)*mu*pow(pi, 2)*sin(pi*y)*cos(pi*x)*cos(pi*z);;
             ForceHaveSet = true;
             break;
         }
@@ -1094,6 +1283,26 @@ private:
       Cmatrix[5][5] = young / (1 + poisson) / 2;
 #endif
     }
+//     if (idata_->caseType == CaseType::PLANTPROPERTY)
+//     {
+//
+//
+//         double young = idata_->planeStrain.young;
+//         double poisson = idata_->planeStrain.poisson;
+//         // C for plane strain
+// #if (DIM == 2)
+//         Cmatrix[0][0] = young * (1 - poisson) / (1 + poisson) / (1 - 2 * poisson);
+//         Cmatrix[0][1] = young * poisson / (1 + poisson) / (1 - 2 * poisson);
+//         Cmatrix[0][2] = 0;
+//         Cmatrix[1][0] = young * poisson / (1 + poisson) / (1 - 2 * poisson);
+//         Cmatrix[1][1] = young * (1 - poisson) / (1 + poisson) / (1 - 2 * poisson);
+//         Cmatrix[1][2] = 0;
+//         Cmatrix[2][0] = 0;
+//         Cmatrix[2][1] = 0;
+//         Cmatrix[2][2] = young / (1 + poisson) / 2;
+// #endif
+//
+//     }
   }
 
   void CalcBe(const TALYFEMLIB::FEMElm &fe, std::vector<std::vector<double>> &Be)

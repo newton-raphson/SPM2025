@@ -16,6 +16,7 @@ set(SLE_SRC src/SSLE.cpp include/SBMCalc.h include/GetSurfaceGp.h include/GetTru
         include/DARefine.h
         include/DACoarse.h
         include/SBMCalcDeepTrace.h
+        include/CalcError.h
         include/DeepTrace.h)
 
 add_executable(sle-sbm ${SLE_SRC} ${LE_INC})

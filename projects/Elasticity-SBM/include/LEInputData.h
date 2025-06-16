@@ -19,7 +19,19 @@ struct Planest
     poisson = root["poisson"];
   }
 };
-
+struct PlantProperty
+{
+  double young_vascular,young_pith,young_rind;
+  double poisson_vascular,poisson_pith,poisson_rind;
+  void read_from_config(const libconfig::Setting &root)
+  {
+    young_vascular = root["young_vascular"];
+    young_pith = root["young_pith"];
+    poisson_vascular = root["poisson_vascular"];
+    poisson_pith = root["poisson_pith"];
+    poisson_rind = root["poisson_rind"];
+  }
+};
 struct Lame
 {
   double lamda;
@@ -187,7 +199,8 @@ enum CaseType : DENDRITE_UINT
   PLANESTRAIN = 1,
   LAME = 2,
 
-  MAX_CASE_TYPE = 3
+  MAX_CASE_TYPE = 3,
+  PLANTPROPERTY = 4,
 };
 
 /// Declare enum to store the type of LE BC cases
@@ -218,6 +231,8 @@ struct RadialBodyForce
   }
 };
 
+
+
 static const char *caseTypeName[]{"PLANESTRESS", "PLANESTRAIN", "LAME"};
 
 class LEInputData : public TALYFEMLIB::InputData
@@ -234,6 +249,7 @@ public: // need to put the variable need to use in the other subroutine here!
   BCCaseType bccaseType;
   Planest planeStress;
   Planest planeStrain;
+  PlantProperty plantProperty;
   TractionBC NormalTraction;
   TractionTopBC HalfBeam;
   BottomTractionBC BottomTract;
@@ -307,7 +323,8 @@ public: // need to put the variable need to use in the other subroutine here!
     PLANT = 4,
     EIFFEL = 5,
     SPHERE = 6,
-    NONE = 7 // fix bug without the geometries
+    RING = 7,
+    NONE = 8 // fix bug without the geometries
   };
   /// Declare the geo type of SBM
   SBMGeo SbmGeo = NONE;
@@ -393,6 +410,11 @@ public: // need to put the variable need to use in the other subroutine here!
     {
       planeStrain.read_from_config(cfg.getRoot()["planestrain"]); // [fix bug]
     }
+    if (caseType == CaseType::PLANTPROPERTY)
+    {
+      plantProperty.read_from_config(cfg.getRoot()["plantproperty"]);
+    }
+
     if (caseType == CaseType::LAME)
     {
       lame.read_from_config(cfg.getRoot()["lame"]);
@@ -722,6 +744,10 @@ private:
       {
           return NONE;
       }
+      else if (str == "RING")
+      {
+        return RING;
+      }
       else
       {
         throw TALYFEMLIB::TALYException() << "Unknown SBM geo-- " << name << str;
@@ -788,6 +814,11 @@ private:
       {
         PrintStatus("[LE case] PLANESTRAIN");
         return PLANESTRAIN;
+      }
+      else if (str == "PLANTPROPERTY")
+      {
+        PrintStatus("[LE case] PLANTPROPERTY");
+        return PLANTPROPERTY;
       }
       else if (str == "lame")
       {

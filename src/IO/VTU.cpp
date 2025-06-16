@@ -71,10 +71,16 @@ void writeVecToVtu(ot::DA<DIM> *da, const std::vector<TREENODE> & treePart,
 //
   // VTK header
   fprintf(fp, "<?xml version=\"1.0\"?>\n");
-  fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\">\n");
+  // fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\">\n");
+  fprintf(fp,
+          "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" "
+          "byte_order=\"LittleEndian\">\n");
   fprintf(fp, "<UnstructuredGrid >\n");
   fprintf(fp, "<Piece NumberOfPoints=\" %d \" NumberOfCells=\" %d \" >\n", num_vertices,
           num_cells * multiplicativeFactor);
+  // fprintf(fp, "<Piece NumberOfPoints=\"%llu\" NumberOfCells=\"%llu\">\n",
+  //         static_cast<unsigned long long>(num_vertices),
+  //         static_cast<unsigned long long>(num_cells * multiplicativeFactor));
 
 
   {                                   /** Points data **/
@@ -336,7 +342,7 @@ void writeVecToVtu(ot::DA<DIM> *da, const std::vector<TREENODE> & treePart,
 #else
       double *localVal = new double[num_cells * nPe];
       for (DENDRITE_UINT dof = 0; dof < ndof; dof++) {
-        fprintf(fp, "<DataArray type=\"Float64\" Name=\" %s \" format=\"binary\">\n", varName[dof]);
+        fprintf(fp, "<DataArray type=\"Float64\" Name=\"%s\" format=\"binary\">\n", varName[dof]);
 
         int cellCount = 0;
         treeloop.reset();
@@ -374,7 +380,7 @@ void writeVecToVtu(ot::DA<DIM> *da, const std::vector<TREENODE> & treePart,
     if (isElemental) {
 #ifdef DENDRITE_VTU_ASCII
       for (DENDRITE_UINT dof = 0; dof < ndof; dof++) {
-        fprintf(fp, "<DataArray type=\"Float64\" Name=\" %s \" format=\"ascii\">\n", varName[dof]);
+        fprintf(fp, "<DataArray type=\"Float64\" Name=\"%s\" format=\"ascii\">\n", varName[dof]);
         for (int i = 0; i < num_cells; i++) {
           for (int k = 0; k < multiplicativeFactor; k++) {
             fprintf(fp,"%f ",vec_[i]);
@@ -384,7 +390,7 @@ void writeVecToVtu(ot::DA<DIM> *da, const std::vector<TREENODE> & treePart,
 #else
       double *localCellData = new double[num_cells * multiplicativeFactor];
       for (DENDRITE_UINT dof = 0; dof < ndof; dof++) {
-        fprintf(fp, "<DataArray type=\"Float64\" Name=\" %s \" format=\"binary\">\n", varName[dof]);
+        fprintf(fp, "<DataArray type=\"Float64\" Name=\"%s\" format=\"binary\">\n", varName[dof]);
         for (int i = 0; i < num_cells; i++) {
           for (int k = 0; k < multiplicativeFactor; k++) {
             localCellData[i * multiplicativeFactor + k] = vec_[i*ndof+dof];
@@ -456,7 +462,9 @@ void writeVecTopVtu(ot::DA<DIM> *da,  const std::vector<TREENODE> & treePart,
     sprintf(pfname, "%s.pvtu", fprefix);
     std::ofstream file(pfname);
     file << "<?xml version=\"1.0\"?> " << std::endl;
-    file << "<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\" >" << std::endl;
+    // file << "<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\" >" << std::endl;
+    file << "<VTKFile type=\"PUnstructuredGrid\" version=\"1.0\" "
+         << "byte_order=\"LittleEndian\">\n";
     file << "<PUnstructuredGrid GhostLevel=\"0\">\n";
     file << "<PPoints>\n";
     file << "<PDataArray type=\"Float32\" NumberOfComponents=\"" << 3 << "\"/>\n";
@@ -465,11 +473,11 @@ void writeVecTopVtu(ot::DA<DIM> *da,  const std::vector<TREENODE> & treePart,
       file << "<PPointData>\n";
 #ifdef DENDRITE_VTU_ASCII
       for (int dof = 0; dof < ndof; dof++) {
-        file << "<PDataArray type=\"Float64\" Name=\"" << varName[dof] << "\" format=\"ascii\"/>\n";
+        file << "<PDataArray type=\"Float64\" Name=\""<<varName[dof]<<"\" format=\"ascii\"/>\n";
       }
 #else
       for (int dof = 0; dof < ndof; dof++) {
-        file << "<PDataArray type=\"Float64\" Name=\"" << varName[dof] << "\" format=\"binary\"/>\n";
+        file << "<PDataArray type=\"Float64\" Name=\""<<varName[dof]<<"\" format=\"binary\"/>\n";
       }
 #endif
       file << "</PPointData>\n";
@@ -478,14 +486,14 @@ void writeVecTopVtu(ot::DA<DIM> *da,  const std::vector<TREENODE> & treePart,
 #ifdef DENDRITE_VTU_ASCII
     if (isElemental) {
       for (int dof = 0; dof < ndof; dof++) {
-        file << "<PDataArray type=\"Float64\" Name=\"" << varName[dof] << "\" format=\"ascii\"/>\n";
+        file << "<PDataArray type=\"Float64\" Name=\""<<varName[dof]<<"\" format=\"ascii\"/>\n";
       }
     }
     file << "<PDataArray type=\"UInt32\" Name=\"rank\" format=\"ascii\"/>\n";
 #else
     if (isElemental) {
       for (int dof = 0; dof < ndof; dof++) {
-        file << "<PDataArray type=\"Float64\" Name=\"" << varName[dof] << "\" format=\"binary\"/>\n";
+        file << "<PDataArray type=\"Float64\" Name=\""<<varName[dof]<<"\" format=\"binary\"/>\n";
       }
     }
     file << "<PDataArray type=\"UInt32\" Name=\"rank\" format=\"binary\"/>\n";

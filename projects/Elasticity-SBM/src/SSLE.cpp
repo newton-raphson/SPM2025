@@ -17,7 +17,8 @@
 //#include "CheckSurface.h"
 #include "DACoarse.h"
 #include "DARefine.h"
-
+#include "CalcError.h"
+#include "../../../external/talylite/external/exprtk/include/exprtk.hpp"
 
 
 using namespace PETSc;
@@ -133,6 +134,7 @@ int main(int argc, char *argv[])
     // Define names of the input and output tensors
     const char *input_name = "input"; // Replace with the actual input name obtained from the model
     const char *output_name = "output"; // Replace with the actual output name obtained from the model
+  ///// this is just a big problem
     if(inputData.SbmGeo == LEInputData::SBMGeo::GYROID) {
 
         input_name = "onnx::Gemm_0"; // Replace with the actual input name obtained from the model
@@ -150,9 +152,43 @@ int main(int argc, char *argv[])
 #if (DIM == 3)
         z = coords[2]*deepTrace.scale;
 #endif
+      if (inputData.SbmGeo == LEInputData::SBMGeo::RING)
+      {
+       //// we directly use an analytical equation for the ring bro
+        // Shift point to be relative to center (1,1)
+        double dx = x - 1.0;
+        double dy = y - 1.0;
+        double radius_pt = std::sqrt(dx*dx + dy*dy);
 
-//        if the structure is SBMGeo GYROID
-if(inputData.SbmGeo == LEInputData::SBMGeo::GYROID) {
+        // Signed distance (positive outside ring, negative inside inner hole)
+        double signed_distance = std::max(radius_pt - 1.0, 0.25 - radius_pt);
+
+        if (signed_distance<0)
+        {
+          return  ibm::Partition::OUT;
+        }
+
+          return  ibm::Partition::IN;
+      }
+      if (inputData.SbmGeo == LEInputData::SBMGeo::PLANT)
+      {
+#if (DIM == 3)
+        throw TALYFEMLIB::TALYException() << "The plant is not defined yet";
+#endif
+        double dx = (x - 0.6) / 0.3;
+        double dy = (y - 0.6) / 0.3;
+        double ellipse_phi = (std::sqrt(dx*dx + dy*dy) - 1.0) * 0.3;
+
+        double circle_phi = std::sqrt(x*x + y*y) - 0.9;
+
+        double signed_distance = std::max(circle_phi, -ellipse_phi);
+        if (signed_distance<0)
+          return  ibm::Partition::OUT;
+        return  ibm::Partition::IN;
+      }
+
+      //////////////if the structure is SBMGeo GYROID/////////////////////
+      if(inputData.SbmGeo == LEInputData::SBMGeo::GYROID) {
 
     /// check the radius with axis along z-axis
     double radius = sqrt(pow(x,2) + pow(y,2)); /// assuming the center is at (0,0)
@@ -162,11 +198,7 @@ if(inputData.SbmGeo == LEInputData::SBMGeo::GYROID) {
     }
 
 }
-if(inputData.SbmGeo == LEInputData::SBMGeo::SPHERE) {
-    if(z< -0.8) {
-        return ibm::Partition::OUT;
-    }
-}
+
         // Prepare input tensor
         std::vector<float> input_tensor_values = {x, y, z};
         std::vector<int64_t> input_tensor_shape = {1, 3}; // Assuming the model expects a [1,3] shape tensor
@@ -214,12 +246,14 @@ if(inputData.SbmGeo == LEInputData::SBMGeo::SPHERE) {
 
     my_kd_tree_t kd_tree(3 /*dim*/, CenterPts, {10 /* max leaf */});
 
-
+//// time the mesh construction
+    double start_time = MPI_Wtime();
     octDA = createSubDA(dTree, functionToRetain, levelBase, eleOrder);
     subDomain.finalize(octDA, dTree.getTreePartFiltered(), domainExtents);
 
     int no_refine = util_funcs::performRefinementSubDA(octDA, domainExtents, dTree, inputData, &subDomain);
-
+    double end_time = MPI_Wtime();
+    PrintStatus("Time to create Mesh = ",end_time-start_time);
     PrintStatus("Number of refinement = ", no_refine);
 
     TALYFEMLIB::PrintStatus("total No of nodes in the mesh = ", octDA->getGlobalNodeSz());
@@ -255,9 +289,9 @@ if(inputData.SbmGeo == LEInputData::SBMGeo::SPHERE) {
   // ndof
   static const DENDRITE_UINT ndof = LENodeData::LE_DOF;
 
-    // time info
-    //// dummy variable for output span
-    std::vector<int> OutputSpan;
+  // time info
+  //// dummy variable for output span
+  std::vector<int> OutputSpan;
   TimeInfo ti(0.0, inputData.dt, inputData.totalT,OutputSpan);
 
   // for SC
@@ -357,6 +391,56 @@ if(inputData.SbmGeo == LEInputData::SBMGeo::SPHERE) {
 
     petscVectopvtu(octDA, dTree.getTreePartFiltered(),U_mag, "results",
                    "U_mag",varname2, domainExtents, false, false, ndof);
+
+#endif
+#if (DIM == 2)
+  IS x_is, y_is;
+  Vec U_mag = util_funcs::GetMag(U_le, x_is, y_is);
+  //
+  // util_funcs::save_timestep(octDA, treePartition, U_mag, 1, ti, subDomain, "leMag", varname2);
+  VecInfo v(U_mag, 1, 0);
+  // Analytic LEAnalytic(octDA, treePartition, v, analytic_sol, subDomain.domainExtents());
+  //  LEAnalytic.getL2error();
+#endif
+#if (DIM == 2)
+  Vec U_x, U_y;
+  util_funcs::GetVec(U_le, x_is, y_is, U_x, U_y);
+  VecInfo vx(U_x, 1, 0);
+  VecInfo vy(U_y, 1, 0);
+#endif
+#if (DIM ==2)
+  double DomainError[2];
+  Marker *elementMarkerBaseOnNode = new Marker(octDA, dTree.getTreePartFiltered(), domainExtents, imga, MarkerType::ELEMENT_NODES);
+  inputData.CalcUxError = true;
+  CalcError calcErrorx(octDA, dTree.getTreePartFiltered(), vx, domainExtents, &subDomain, &inputData,elementMarkerBaseOnNode->getMarkers());
+  calcErrorx.getL2error(DomainError);
+  TALYFEMLIB::PrintStatus("[Domain Error] L2, Lf (x-dir) = ", DomainError[0], " ", DomainError[1]);
+  double l2_error_x = DomainError[0];
+  const auto &elemErrorX = calcErrorx.getElementalError();
+  static const char *varnameErrorX[]{"ErrorX"};
+  IO::writeVecTopVtu(octDA, dTree.getTreePartFiltered(), elemErrorX.data(), "Error", "ElemErrorX", varnameErrorX,
+                     domainExtents, true);
+
+
+  inputData.CalcUxError = false;
+  CalcError calcErrory(octDA, dTree.getTreePartFiltered(), vy, domainExtents, &subDomain, &inputData,elementMarkerBaseOnNode->getMarkers());
+  calcErrory.getL2error(DomainError);
+  TALYFEMLIB::PrintStatus("[Domain Error] L2, Lf (y-dir) = ", DomainError[0], " ", DomainError[1]);
+  const auto &elemErrorY = calcErrory.getElementalError();
+  static const char *varnameErrorY[]{"ErrorY"};
+  double l2_error_y = DomainError[0];
+  IO::writeVecTopVtu(octDA, dTree.getTreePartFiltered(), elemErrorY.data(), "Error", "ElemErrorY", varnameErrorY,
+                     domainExtents, true);
+  if(!rank)
+  {
+    double l2_error = std::sqrt(l2_error_x*l2_error_x + l2_error_y*l2_error_y);
+
+    std::cout << "L2 error over Surrogate Domain = "<< std::scientific<<l2_error<<std::endl;
+  }
+#endif
+#if (DIM == 3)
+  /// let's compute error properly
+  /// because we have analytic solution
 
 #endif
 

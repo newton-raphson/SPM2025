@@ -75,7 +75,7 @@ namespace PETSc {
         ierr = MatZeroRowsIS(mat, is, 1.0, NULL, NULL); CHKERRQ(ierr);
         ISDestroy(&is);
 #ifdef  IBM
-        this->applySBMBoundaryCondition(da,mat);
+        // this->applySBMBoundaryCondition(da,mat);
 #endif
         return 0;
     }

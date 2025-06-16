@@ -49,7 +49,8 @@ public:
     enum class BCTypes
     {
         DIRICHLET=0,
-        NEUMANN=1
+        NEUMANN=1,
+        NONE=2
     };
   /**
    * @brief constructor
@@ -535,10 +536,68 @@ void SBMCalc::GetBC(const double (&d_)[DIM], double *BCValue, BCTypes &BCType) {
 #endif
 #if (DIM == 2)
     //// throw error if the dimension is 2
-    throw std::runtime_error("Not implemented for 2D!");
+    // throw std::runtime_error("Not implemented for 2D!");
 #endif
     switch (idata_->SbmGeo) {
+#if (DIM == 2)
+    case LEInputData::SBMGeo::RING:
+        {
+            const double x_mid = 1.0;
+            const double y_mid = 1.0;
+            const DENDRITE_REAL r = sqrt((x_true - x_mid) * (x_true - x_mid) + (y_true- x_mid) * (y_true - x_mid));
+            // Determine which circle is closer
+            double target_radius;
+            if (r < 0.25)
+                target_radius = 0.25;
+            else if (r > 1.0)
+                target_radius = 1.0;
+            else
+                target_radius = (r - 0.25 < 1.0 - r) ? 0.25 : 1.0;
 
+            // if (target_radius == 1.0)
+            // {
+            //     BCType = BCTypes::NONE;
+            //     break;
+            // }
+            double cosx = (x_true- x_mid) / r;
+            double sinx = (y_true - y_mid) / r;
+
+            BCValue[0] = -r * log(r) / 2 / log(2) * cosx;
+            BCValue[1] = -r * log(r) / 2 / log(2) * sinx;
+            BCType = BCTypes::DIRICHLET;
+            break;
+        }
+    case LEInputData::SBMGeo::PLANT:
+        {
+            const double x_mid = 0.0;
+            const double y_mid = 0.0;
+            const DENDRITE_REAL r = sqrt((x_true - x_mid) * (x_true - x_mid) + (y_true- x_mid) * (y_true - x_mid));
+            // Determine which circle is closer
+            // double target_radius;
+            // if (r < 0.25)
+            //     target_radius = 0.25;
+            // else if (r > 1.0)
+            //     target_radius = 1.0;
+            // else
+            //     target_radius = (r - 0.25 < 1.0 - r) ? 0.25 : 1.0;
+            //
+            // // if (target_radius == 1.0)
+            // // {
+            // //     BCType = BCTypes::NONE;
+            // //     break;
+            // // }
+            // double cosx = (x_true- x_mid) / r;
+            // double sinx = (y_true - y_mid) / r;
+
+            // BCValue[0] = sin(M_PI*x_true)*sin(M_PI*y_true)/100;
+            // BCValue[1] = cos(M_PI*x_true)*cos(M_PI*y_true)/100;
+            BCType = BCTypes::NONE;
+            break;
+        }
+
+
+#endif
+#if(DIM == 3)
         case LEInputData::SBMGeo::BUNNY:
         {
             /// we have three cases if z_true is below some value z1 we fix it
@@ -605,15 +664,17 @@ void SBMCalc::GetBC(const double (&d_)[DIM], double *BCValue, BCTypes &BCType) {
         }
         case LEInputData::SBMGeo::SPHERE:
         {
-            BCValue[0] = sin(M_PI * (x_true )) * cos(M_PI * (y_true)) * sin(M_PI * (z_true)) / 10.0;
-            BCValue[1] = cos(M_PI * (x_true )) * sin(M_PI * (y_true)) * sin(M_PI * (z_true)) / 10.0;
-            BCValue[2] = sin(M_PI * (x_true )) * sin(M_PI * (y_true)) * cos(M_PI * (z_true)) / 20.0;
+            BCValue[0] = sin(M_PI*x_true)*sin(M_PI*y_true)* sin(M_PI *z_true)/10.0;
+            BCValue[1] =  cos(M_PI*x_true)*cos(M_PI*y_true)* sin(M_PI *z_true)/10.0;
+            BCValue[2] = cos(M_PI * x_true) * sin(M_PI * y_true) * cos(M_PI * z_true) / 10;
 
             BCType = BCTypes::DIRICHLET;
 
             break;
 
         }
+#endif
+
         default:
         {
             break;

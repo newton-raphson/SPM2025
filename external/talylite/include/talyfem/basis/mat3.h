@@ -24,6 +24,7 @@
 #include <type_traits>  // for std::enable_if
 #include <array>  // for std::array
 #include <cmath>
+#include <cstdint>
 
 namespace TALYFEMLIB {
 
