@@ -27,10 +27,139 @@ struct PlantProperty
   {
     young_vascular = root["young_vascular"];
     young_pith = root["young_pith"];
+    young_rind = root["young_rind"];
     poisson_vascular = root["poisson_vascular"];
     poisson_pith = root["poisson_pith"];
     poisson_rind = root["poisson_rind"];
   }
+};
+struct PlantGeometry
+{
+  ///// Geometry parameters (not initialized)
+  double ellipse_cx;
+  double ellipse_cy;
+  double ellipse_rx;
+  double ellipse_ry;
+  double major_circle_radius;
+  double height;
+
+  //// vascular bundle pattern
+
+  double circle_radius;
+  double offset_threshold;
+  double radius_max;
+  int num_rings;
+  int num_sectors;
+  double radius_tolerance;
+  double angle_jitter_min;
+  double angle_jitter_max;
+  double radius_jitter_min;
+  double radius_jitter_max;
+  unsigned rng_seed;
+  /// vascular bundle refinement
+  unsigned bundle_refinement;
+  //// this is the center for circles
+  using Point = std::pair<double, double>;
+  std::vector<Point> circle_centers;
+
+
+  // Load from config file
+  void read_from_config(const libconfig::Setting& root) {
+    ellipse_cx = root["ellipse_cx"];
+    ellipse_cy = root["ellipse_cy"];
+    ellipse_rx = root["ellipse_rx"];
+    ellipse_ry = root["ellipse_ry"];
+    major_circle_radius = root["major_circle_radius"];
+    height = root["height"];
+
+    circle_radius = root["circle_radius"];
+    offset_threshold = root["offset_threshold"];
+    radius_max = root["radius_max"];
+    num_rings = root["num_rings"];
+    num_sectors = root["num_sectors"];
+    radius_tolerance = root["radius_tolerance"];
+    angle_jitter_min = root["angle_jitter_min"];
+    angle_jitter_max = root["angle_jitter_max"];
+    radius_jitter_min = root["radius_jitter_min"];
+    radius_jitter_max = root["radius_jitter_max"];
+    rng_seed = root["rng_seed"];
+
+    generateRadialPattern();  // Automatically compute and cache the circle centers
+  }
+
+private:
+  void generateRadialPattern() {
+    std::default_random_engine rng(rng_seed);
+    std::uniform_real_distribution<double> angle_jitter(angle_jitter_min, angle_jitter_max);
+    std::uniform_real_distribution<double> radius_jitter(radius_jitter_min, radius_jitter_max);
+
+    double angular_step = 2.0 * M_PI / num_sectors;
+    double base_radius = radius_max / num_rings;
+
+    circle_centers.clear();
+    for (int r = 1; r <= num_rings; ++r) {
+      double radial_distance = r * base_radius;
+      for (int a = 0; a < num_sectors; ++a) {
+        double angle = a * angular_step + angle_jitter(rng);
+        double radius = radial_distance + radius_jitter(rng);
+        double x = radius * std::cos(angle);
+        double y = radius * std::sin(angle);
+
+        bool overlaps = false;
+        for (const auto& c : circle_centers) {
+          double dx = x - c.first;
+          double dy = y - c.second;
+          if (std::sqrt(dx * dx + dy * dy) < 2.1 * radius_tolerance) {
+            overlaps = true;
+            break;
+          }
+        }
+
+        if (!overlaps) {
+          circle_centers.emplace_back(x, y);
+        }
+      }
+    }
+  }
+  void read_RadialPattern()
+  {
+    /// read a csv file names bundle_center.csv and
+    throw std::runtime_error("Not implemented");
+
+  }
+
+public:
+  // Signed distance to ellipse ⊖ circle
+  double signedDistance(double x, double y) const {
+    double dx = (x - ellipse_cx) / ellipse_rx;
+    double dy = (y - ellipse_cy) / ellipse_ry;
+    double ellipse_phi = (std::sqrt(dx * dx + dy * dy) - 1.0) * std::min(ellipse_rx, ellipse_ry);
+    double circle_phi = std::sqrt(x * x + y * y) - circle_radius;
+    return std::max(circle_phi, -ellipse_phi);
+  }
+
+  bool isInOffsetRegion(const std::vector<Point>& coords) const {
+    for (const auto& p : coords) {
+      if (signedDistance(p.first, p.second) > offset_threshold) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool isInsideRadialCircle(const std::vector<Point>& coords) const {
+    for (const auto& pt : coords) {
+      for (const auto& center : circle_centers) {
+        double dx = pt.first - center.first;
+        double dy = pt.second - center.second;
+        if (std::sqrt(dx * dx + dy * dy) <= radius_tolerance) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
 };
 struct Lame
 {

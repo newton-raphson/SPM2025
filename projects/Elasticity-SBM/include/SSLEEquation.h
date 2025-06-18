@@ -1425,4 +1425,9 @@ private:
         }
     }
 
+    void CalcCmatrix(const TALYFEMLIB::FEMElm &fe, double (&Cmatrix)[3 * (DIM - 1)][3 * (DIM - 1)])
+  {
+
+  }
+
 };

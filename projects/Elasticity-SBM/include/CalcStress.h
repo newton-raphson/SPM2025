@@ -71,6 +71,7 @@ CalcStress::CalcStress(DA *octDA, const std::vector<TREENODE> &treePart, const V
 void CalcStress::traverseOperation(TALYFEMLIB::FEMElm &fe, const PetscScalar *values)
 {
     const DENDRITE_UINT ndof = this->getNdof();
+
     double VonMisesStress = 0.0;
 
     fe.refill(0, 0);
