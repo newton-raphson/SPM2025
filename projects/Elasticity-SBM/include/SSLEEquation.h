@@ -64,8 +64,6 @@ public:
 #ifndef NDEBUG
       WriteCSV("volumetric.csv",{fe.position().x(),fe.position().y()},"x,y,x");
 #endif
-
-
       for(int a = 0; a < n_basis_functions; a++)
       { // loop over test basis functions (a)
           for(int b = 0; b < n_basis_functions; b++)
@@ -77,6 +75,8 @@ public:
                           for (int j = 0; j < DIM; j++) { // internal sum j
                               Ae(DIM * a + i, DIM * b + k) +=
                                       fe.dN(b, l) * Cmatrix[tensorToVoigt(i,j)][tensorToVoigt(k,l)] * fe.dN(a, j) * detJxW * 0.5;
+                              // Ae(DIM * a + i, DIM * b + k) +=0;
+
                           } // end j
 
                       } // end l
@@ -89,6 +89,7 @@ public:
                           for (int j = 0; j < DIM; j++) { // internal sum j
                               Ae(DIM * a + i, DIM * b + l) +=
                                       fe.dN(b, k) * Cmatrix[tensorToVoigt(i,j)][tensorToVoigt(k,l)] * fe.dN(a, j) * detJxW * 0.5;
+                              // Ae(DIM * a + i, DIM * b + k) +=0;
                           } // end j
 
                       } // end k
@@ -99,6 +100,43 @@ public:
           } // end b
 
       } // end a
+
+
+      return;
+
+      // for(int a = 0; a < n_basis_functions; a++)
+      // { // loop over test basis functions (a)
+      //     for(int b = 0; b < n_basis_functions; b++)
+      //     { // loop over trial basis functions (b)
+      //         for(int i = 0; i < DIM; i++) { // loop over DOF test function i
+      //
+      //             for (int k = 0; k < DIM; k++) { // loop over DOF trial function k
+      //                 for (int l = 0; l < DIM; l++) { // internal sum l
+      //                     for (int j = 0; j < DIM; j++) { // internal sum j
+      //                         Ae(DIM * a + i, DIM * b + k) +=
+      //                                 fe.dN(b, l) * Cmatrix[tensorToVoigt(i,j)][tensorToVoigt(k,l)] * fe.dN(a, j) * detJxW * 0.5;
+      //                     } // end j
+      //
+      //                 } // end l
+      //
+      //             } // end k
+      //
+      //             /////// symmetric part  //////
+      //             for(int l = 0; l < DIM; l++) { // loop over DOF trial function l
+      //                 for (int k = 0; k < DIM; k++) { // internal sum k
+      //                     for (int j = 0; j < DIM; j++) { // internal sum j
+      //                         Ae(DIM * a + i, DIM * b + l) +=
+      //                                 fe.dN(b, k) * Cmatrix[tensorToVoigt(i,j)][tensorToVoigt(k,l)] * fe.dN(a, j) * detJxW * 0.5;
+      //                     } // end j
+      //
+      //                 } // end k
+      //             } // end l
+      //
+      //
+      //         } // end i
+      //     } // end b
+      //
+      // } // end a
 
 
 //for(int a = 0; a < n_basis_functions; a++)
@@ -253,35 +291,59 @@ public:
   {
 
 
-    using namespace TALYFEMLIB;
-    const ZEROPTV &p = fe.position();
+    // using namespace TALYFEMLIB;
+    // const ZEROPTV &p = fe.position();
+    //
+    // ZEROPTV BodyForce;
+    // bool ForceHaveSet = false;
+    // CalcForce(p, BodyForce, ForceHaveSet);
+    //
+    //   for(int a=0; a<fe.nbf(); a++)
+    //   { // loop over test basis functions (a)
+    //       for(int i=0; i<DIM; i++)
+    //       { // loop over DOF test function i
+    //           be(DIM*a+i) += BodyForce(i) * fe.N(a) * fe.detJxW();
+    //           // be(DIM*a+i) += 0;
+    //       } // end i
+    //   } // end a
 
-    ZEROPTV BodyForce;
-    bool ForceHaveSet = false;
-    CalcForce(p, BodyForce, ForceHaveSet);
-    if (!ForceHaveSet)
-    {
-      BodyForce = idata_->BodyForce;
-    }
+      ZEROPTV f;
+      CalcForcing(fe, f);
 
-#if (DIM == 3)
-    double body_z = idata_->BodyForce[2];
-#endif
-    double BR_V = idata_->radialbodyforce.br_v;
-    int BR_POW = idata_->radialbodyforce.br_pow;
 
-      // BodyForce.print();
 
-    /*
-     * please write something like this so that it can support both 2D and 3D
-     */
-    for (int a = 0; a < fe.nbf(); a++)
-    {
-      for (int dim = 0; dim < DIM; dim++)
-      {
-        be(DIM * a + dim) += fe.N(a) * BodyForce(dim) * fe.detJxW();
-      }
-    }
+      for(int a=0; a<fe.nbf(); a++)
+      { // loop over test basis functions (a)
+          for(int i=0; i<DIM; i++)
+          { // loop over DOF test function i
+              be(DIM*a+i) += f(i) * fe.N(a) * fe.detJxW();
+              // be(DIM*a+i) += 0;
+          } // end i
+      } // end a
+    return;
+    // if (!ForceHaveSet)
+    // {
+    //   BodyForce = idata_->BodyForce;
+    // }
+//
+// #if (DIM == 3)
+//     double body_z = idata_->BodyForce[2];
+// #endif
+//     double BR_V = idata_->radialbodyforce.br_v;
+//     int BR_POW = idata_->radialbodyforce.br_pow;
+//
+//       // BodyForce.print();
+//
+//     /*
+//      * please write something like this so that it can support both 2D and 3D
+//      */
+//     for (int a = 0; a < fe.nbf(); a++)
+//     {
+//       for (int dim = 0; dim < DIM; dim++)
+//       {
+//         be(DIM * a + dim) += fe.N(a) * BodyForce(dim) * fe.detJxW();
+//       }
+//     }
 
 #if (DIM == 2)
     double x_min = idata_->mesh_def.physDomain.min[0];
@@ -793,7 +855,7 @@ WriteCSV("true_points.csv", {true_points.x(), true_points.y(),true_points.z(),tr
       if (bcType == SBMCalc::BCTypes::DIRICHLET){
 
 #ifndef NDEBUG
-          WriteCSV("dirichlet_be.csv", {fe.position().x(), fe.position().y(),fe.position().z(),BCValue[0],BCValue[1],BCValue[2]},"X,Y,Z,BCX,BCY,BCZ");
+          WriteCSV("Dirichlet_dVec.csv", {fe.position().x(), fe.position().y(), fe.position().z(), d[0], d[1], d[2]},"x,y,z,dx,dy,dz");
 #endif
            CalcCmatrix(Cmatrix);
           const ZEROPTV SurrogateNormal = fe.surface()->normal();
@@ -902,7 +964,7 @@ WriteCSV("true_points.csv", {true_points.x(), true_points.y(),true_points.z(),tr
               }
           }
           return;
-          return;
+
       }
 
       if (bcType == SBMCalc::BCTypes::NEUMANN) {
@@ -924,6 +986,8 @@ WriteCSV("true_points.csv", {true_points.x(), true_points.y(),true_points.z(),tr
                     be(DIM * a + i) += fe.N(a) * SurrogateDotTrueNormal * BCValue[i] *TrueNormal[i] * detJxW;
                 }
             }
+
+          return;
 
         }
 
@@ -962,7 +1026,25 @@ WriteCSV("true_points.csv", {true_points.x(), true_points.y(),true_points.z(),tr
 
 private:
   LEInputData *idata_;
-
+        void CalcForcing(const TALYFEMLIB::FEMElm &fe,ZEROPTV& forcing) {
+        //// do the same thing using the switch statement for forcing as well
+            switch (idata_->SbmGeo)
+            {
+            case LEInputData::SBMGeo::SPHERE:
+                {
+                    double pi = M_PI;
+                    double lam = idata_->lame.lamda;
+                    double mu = idata_->lame.mu;
+                    double x = fe.position().x();
+                    double y = fe.position().y();
+                    double z = fe.position().z();
+                    forcing.x() = -1.0/10.0*lam*pow(pi, 2)*sin(pi*x)*sin(pi*y)*sin(pi*z) + (1.0/5.0)*mu*pow(pi, 2)*sin(pi*x)*sin(pi*y)*sin(pi*z);
+                    forcing.y() = (1.0/10.0)*lam*pow(pi, 2)*sin(pi*z)*cos(pi*x)*cos(pi*y) + (2.0/5.0)*mu*pow(pi, 2)*sin(pi*z)*cos(pi*x)*cos(pi*y);
+                    forcing.z() = (1.0/10.0)*lam*pow(pi, 2)*sin(pi*y)*cos(pi*x)*cos(pi*z) + (2.0/5.0)*mu*pow(pi, 2)*sin(pi*y)*cos(pi*x)*cos(pi*z);
+                    break;
+                }
+            }
+    }
   /**
    * This function is going to check the SBMGeo and find out the corresponding MMS force calculated from MMS solution
    * @param p IN
@@ -1219,24 +1301,24 @@ private:
       Cmatrix[5][5] = young / (1 + poisson) / 2;
 #endif
     }
-    if (idata_->caseType == CaseType::LAME)
-    {
-      double lamda = idata_->lame.lamda;
-      double mu = idata_->lame.mu;
-      // C for lame parameters
+        if (idata_->caseType == CaseType::LAME)
+        {
+            double lamda = idata_->lame.lamda;
+            double mu = idata_->lame.mu;
+            // C for lame parameters
 #if (DIM == 2)
-      Cmatrix[0][0] = lamda + 2 * mu;
-      Cmatrix[0][1] = lamda;
-      Cmatrix[0][2] = 0;
-      Cmatrix[1][0] = lamda;
-      Cmatrix[1][1] = lamda + 2 * mu;
-      Cmatrix[1][2] = 0;
-      Cmatrix[2][0] = 0;
-      Cmatrix[2][1] = 0;
-      Cmatrix[2][2] = mu;
+            Cmatrix[0][0] = lamda + 2 * mu;
+            Cmatrix[0][1] = lamda;
+            Cmatrix[0][2] = 0;
+            Cmatrix[1][0] = lamda;
+            Cmatrix[1][1] = lamda + 2 * mu;
+            Cmatrix[1][2] = 0;
+            Cmatrix[2][0] = 0;
+            Cmatrix[2][1] = 0;
+            Cmatrix[2][2] = mu;
 #endif
 #if (DIM == 3)
-      double young = mu * (3 * lamda + 2 * mu) / (mu + lamda);
+            double young = mu * (3 * lamda + 2 * mu) / (mu + lamda);
       double poisson = lamda / 2 / (lamda + mu);
 
       Cmatrix[0][0] = young * (1 - poisson) / (1 + poisson) / (1 - 2 * poisson);
@@ -1282,7 +1364,7 @@ private:
       Cmatrix[5][4] = 0;
       Cmatrix[5][5] = young / (1 + poisson) / 2;
 #endif
-    }
+        }
 //     if (idata_->caseType == CaseType::PLANTPROPERTY)
 //     {
 //
@@ -1415,14 +1497,26 @@ private:
   }
 
 
-  int tensorToVoigt(int i, int j) {
-        if (i == j) {
-            // xx -> 0, yy -> 1
-            return (i == 0) ? 0 : 1; // 0 for xx, 1 for yy
-        } else {
-            // xy or yx -> 2
-            return 2;
-        }
-    }
+    int tensorToVoigt(int i, int j) {
+#if(DIM==2)
+      // 2D Voigt notation: [xx, yy, xy]
+      if (i == j) {
+          return i; // 0 for xx, 1 for yy
+      } else {
+          return 2; // 2 for xy or yx
+      }
+#endif
+#if (DIM==3)
+      // 3D Voigt notation: [xx, yy, zz, yz, xz, xy]
+      if (i == j) {
+          return i; // 0 for xx, 1 for yy, 2 for zz
+      }
+      if ((i == 1 && j == 2) || (i == 2 && j == 1)) return 3; // yz
+      if ((i == 0 && j == 2) || (i == 2 && j == 0)) return 4; // xz
+      if ((i == 0 && j == 1) || (i == 1 && j == 0)) return 5; // xy
+#endif
+      // Invalid input
+      return -1;
+  }
 
 };

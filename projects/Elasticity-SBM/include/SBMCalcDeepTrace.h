@@ -115,7 +115,7 @@ void SBMCalcDeepTrace::Dist2Geo(double (&d)[DIM]) {
         return;
     }
 
-    // PtDist2Geo(pt, d);
+    PtDist2Geo(pt, d);
 
 }
 

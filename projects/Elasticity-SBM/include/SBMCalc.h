@@ -664,9 +664,13 @@ void SBMCalc::GetBC(const double (&d_)[DIM], double *BCValue, BCTypes &BCType) {
         }
         case LEInputData::SBMGeo::SPHERE:
         {
-            BCValue[0] = sin(M_PI*x_true)*sin(M_PI*y_true)* sin(M_PI *z_true)/10.0;
-            BCValue[1] =  cos(M_PI*x_true)*cos(M_PI*y_true)* sin(M_PI *z_true)/10.0;
-            BCValue[2] = cos(M_PI * x_true) * sin(M_PI * y_true) * cos(M_PI * z_true) / 10;
+            // BCValue[0] = sin(M_PI*x_true)*sin(M_PI*y_true)* sin(M_PI *z_true)/10.0;
+            // BCValue[1] =  cos(M_PI*x_true)*cos(M_PI*y_true)* sin(M_PI *z_true)/10.0;
+            // BCValue[2] = cos(M_PI * x_true) * sin(M_PI * y_true) * cos(M_PI * z_true) / 10;
+            BCValue[0] = 0;
+            BCValue[1] =  0;
+            BCValue[2] = 0;
+
 
             BCType = BCTypes::DIRICHLET;
 
