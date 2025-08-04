@@ -6,7 +6,9 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules")  # for FindPE
 find_package(OpenMP REQUIRED)
 find_package(MPI REQUIRED)
 
-
+# Use the include and lib paths
+#include_directories(${ONNXRUNTIME_LIB_DIR}/../include)
+#link_directories(${ONNXRUNTIME_LIB_DIR})
 # For now we just make it compulsory to have LAPACK installed.
 #Later we will make it possible if LAPACK is not present to automaticall install before compiling dendro5
 if (OPENMP_FOUND)

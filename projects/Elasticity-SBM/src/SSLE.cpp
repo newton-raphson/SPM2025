@@ -175,13 +175,14 @@ int main(int argc, char *argv[])
 #if (DIM == 3)
         throw TALYFEMLIB::TALYException() << "The plant is not defined yet";
 #endif
-        double dx = (x - 0.6) / 0.3;
-        double dy = (y - 0.6) / 0.3;
-        double ellipse_phi = (std::sqrt(dx*dx + dy*dy) - 1.0) * 0.3;
 
-        double circle_phi = std::sqrt(x*x + y*y) - 0.9;
+//          double dx = (x - ellipse_cx) / ellipse_rx;
+//          double dy = (y - ellipse_cy) / ellipse_ry;
+//          double ellipse_phi = (std::sqrt(dx * dx + dy * dy) - 1.0) * std::min(ellipse_rx, ellipse_ry);
+//          double circle_phi = std::sqrt(x * x + y * y) - circle_radius;
+//          return std::max(circle_phi, -ellipse_phi);
 
-        double signed_distance = std::max(circle_phi, -ellipse_phi);
+        double signed_distance = inputData.plantGeometry.signedDistance(x, y);
         if (signed_distance<0)
           return  ibm::Partition::OUT;
         return  ibm::Partition::IN;

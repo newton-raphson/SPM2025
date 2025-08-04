@@ -138,20 +138,20 @@ public:
     return std::max(circle_phi, -ellipse_phi);
   }
 
-  bool isInOffsetRegion(const std::vector<Point>& coords) const {
+  bool isInOffsetRegion(const std::vector<ZEROPTV>& coords) const {
     for (const auto& p : coords) {
-      if (signedDistance(p.first, p.second) > offset_threshold) {
+      if (signedDistance(p.x(), p.y()) > offset_threshold) {
         return true;
       }
     }
     return false;
   }
 
-  bool isInsideRadialCircle(const std::vector<Point>& coords) const {
+  bool isInsideRadialCircle(const std::vector<ZEROPTV>& coords) const {
     for (const auto& pt : coords) {
       for (const auto& center : circle_centers) {
-        double dx = pt.first - center.first;
-        double dy = pt.second - center.second;
+        double dx = pt.x() - center.first;
+        double dy = pt.x() - center.second;
         if (std::sqrt(dx * dx + dy * dy) <= radius_tolerance) {
           return true;
         }
@@ -379,6 +379,7 @@ public: // need to put the variable need to use in the other subroutine here!
   Planest planeStress;
   Planest planeStrain;
   PlantProperty plantProperty;
+  PlantGeometry plantGeometry; // for plant geometry
   TractionBC NormalTraction;
   TractionTopBC HalfBeam;
   BottomTractionBC BottomTract;
@@ -542,6 +543,7 @@ public: // need to put the variable need to use in the other subroutine here!
     if (caseType == CaseType::PLANTPROPERTY)
     {
       plantProperty.read_from_config(cfg.getRoot()["plantproperty"]);
+      plantGeometry.read_from_config(cfg.getRoot()["plantgeometry"]);
     }
 
     if (caseType == CaseType::LAME)
