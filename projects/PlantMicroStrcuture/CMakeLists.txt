@@ -6,6 +6,8 @@ set(LE_INC
         include/LEBCSetup.h
         include/SSLEEquation.h
         include/LEInputDataStructs.h
+        include/MaterialMap2D.h
+        include/stb_image.h
 )
 
 set(SLE_SRC src/SSLE.cpp

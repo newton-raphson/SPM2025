@@ -6,14 +6,86 @@
 #include "LENodeData.h"
 #include "LEBCSetup.h"
 #include "SSLEEquation.h"
+#include "OctToPhysical.h"
+#include <algorithm>
+#include <array>
+#include <sfcTreeLoop_matvec_io.h>
 #include <petscvec.h>
 #include "CalcStress.h"
-#ifdef DEEPTRACE
-#include <onnxruntime_cxx_api.h>
-#endif
 
-
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 using namespace PETSc;
+
+namespace
+{
+void writeMaterialPropertyField(DA *octDA,
+                                const std::vector<TREENODE> &treePart,
+                                const DomainExtents &domainExtents,
+                                const SSLEEquation &equation)
+{
+  if (!octDA->isActive())
+  {
+    return;
+  }
+
+  const DENDRITE_UINT nPe = octDA->getNumNodesPerElement();
+  const DENDRITE_UINT sz = octDA->getTotalNodalSz();
+  auto partFront = octDA->getTreePartFront();
+  auto partBack = octDA->getTreePartBack();
+  const auto tnCoords = octDA->getTNCoords();
+
+  std::vector<double> nodeCoords(static_cast<std::size_t>(nPe) * DIM, 0.0);
+  std::vector<double> elemData(static_cast<std::size_t>(octDA->getLocalElementSz()) * 2, 0.0);
+  OctToPhysical octToPhysical(domainExtents);
+
+  DENDRITE_UINT elemIdx = 0;
+  ot::MatvecBaseCoords<DIM> loop(sz, octDA->getElementOrder(), false, 0, tnCoords,
+                                 &(*treePart.cbegin()), treePart.size(),
+                                 *partFront, *partBack);
+
+  while (!loop.isFinished())
+  {
+    if (loop.isPre() && loop.subtreeInfo().isLeaf())
+    {
+      if (!nodeCoords.empty())
+      {
+        const double *nodeCoordsFlat = loop.subtreeInfo().getNodeCoords();
+        std::copy(nodeCoordsFlat, nodeCoordsFlat + nodeCoords.size(), nodeCoords.begin());
+        octToPhysical.convertCoordsToPhys(nodeCoords.data(), nPe);
+
+        std::array<double, DIM> centroid{};
+        for (DENDRITE_UINT node = 0; node < nPe; ++node)
+        {
+          for (int d = 0; d < DIM; ++d)
+          {
+            centroid[d] += nodeCoords[node * DIM + d];
+          }
+        }
+        const double inv = 1.0 / static_cast<double>(nPe);
+        for (auto &value : centroid)
+        {
+          value *= inv;
+        }
+
+        const auto matProps = equation.queryMaterialAt(centroid[0], (DIM >= 2) ? centroid[1] : 0.0);
+        elemData[elemIdx * 2 + 0] = matProps.E;
+        elemData[elemIdx * 2 + 1] = matProps.nu;
+      }
+      ++elemIdx;
+      loop.next();
+    }
+    else
+    {
+      loop.step();
+    }
+  }
+
+  static const char *varNames[]{"young_modulus", "poisson_ratio"};
+  IO::writeVecTopVtu(octDA, treePart, elemData.data(), "MaterialProp", "material_props",
+                     varNames, domainExtents, true, false, 2);
+}
+}
 
 int main(int argc, char *argv[])
 {
@@ -47,31 +119,6 @@ int main(int argc, char *argv[])
   }
   /// --------------------------------------------------------------------------------------------------------------////
 
-#ifndef PROFILING
-  /// this is for quick testing through different refine lvl
-  if (argc == 2 and inputData.BaselvlFromArgument)
-  {
-    inputData.mesh_def.refine_lvl_base = std::atoi(argv[1]);
-    TALYFEMLIB::PrintStatus("---------------------------------------");
-    TALYFEMLIB::PrintStatus("Refine level base from argument = ", inputData.mesh_def.refine_lvl_base);
-    TALYFEMLIB::PrintStatus("---------------------------------------");
-  }
-  /// this is for quick testing through different refine lvl and lambda
-  if (argc == 3 and inputData.BaselvlFromArgument)
-  {
-    inputData.mesh_def.refine_lvl_base = std::atoi(argv[1]);
-    inputData.RatioGPSBM = (double)std::atoi(argv[2]) / 100;
-    TALYFEMLIB::PrintStatus("---------------------------------------");
-    TALYFEMLIB::PrintStatus("Refine level base from argument = ", inputData.mesh_def.refine_lvl_base);
-    TALYFEMLIB::PrintStatus("Lambda from argument = ", inputData.RatioGPSBM);
-    TALYFEMLIB::PrintStatus("---------------------------------------");
-  }
-#else
-  TALYFEMLIB::PrintStatus("---------------------------------------");
-  TALYFEMLIB::PrintStatus("please put -log_view after the run to print out the time");
-  TALYFEMLIB::PrintStatus("---------------------------------------");
-#endif
-
   const DENDRITE_UINT eleOrder = inputData.elemOrder;
   const DENDRITE_UINT levelBase = inputData.mesh_def.refine_lvl_base;
   const bool mfree = inputData.ifMatrixFree;
@@ -85,16 +132,27 @@ int main(int argc, char *argv[])
 #endif
 
   ///------------------------------------------Creation/loading of mesh----------------------------------------------///
-  DomainExtents domainExtents(inputData.mesh_def.fullDADomain, inputData.mesh_def.physDomain);
+  DomainInfo cubeDomain, physDomain;
+  cubeDomain.min.fill(0);
+  cubeDomain.max.fill(1);
+  physDomain.min.fill(0);
+  physDomain.max.fill(1);
+
+  DomainExtents domainExtents(cubeDomain, physDomain);
+
   DA *octDA = nullptr;
   DistTREE dTree;
   SubDomain subDomain(domainExtents, resume_from_checkpoint);
+
+  std::function<ibm::Partition(const double *, double )> functionToRetain = [&](const double *physCoords, double physSize) {
+    return (subDomain.functionToRetain(physCoords, physSize));
+  };
 
 
 //// time the mesh construction
     double start_time = MPI_Wtime();
     octDA = createSubDA(dTree, functionToRetain, levelBase, eleOrder);
-    subDomain.finalize(octDA, dTree.getTreePartFiltered(), domainExtents);
+    // subDomain.finalize(octDA, dTree.getTreePartFiltered(), domainExtents);
 
     double end_time = MPI_Wtime();
     PrintStatus("Time to create Mesh = ",end_time-start_time);
@@ -130,7 +188,7 @@ int main(int argc, char *argv[])
                                                          &ti, false, nullptr, &inputData);
 
 
-  LinearSolver *leSolver = setLinearSolver(leEq, octDA,dTree,ndof, mfree);
+  LinearSolver *leSolver = setLinearSolver(leEq, octDA,dTree,ndof, mfree,false,true);
 
 
   inputData.solverOptionsLE.apply_to_petsc_options("-le_");
@@ -140,96 +198,116 @@ int main(int argc, char *argv[])
     KSPSetFromOptions(SSLEEquation_ksp);
   }
 
-  PrintStatus("Setting BC for LE");
-  leSolver->setDirichletBoundaryCondition([&](const TALYFEMLIB::ZEROPTV &pos, int nodeID) -> Boundary
-                                          {
-                                            Boundary b;
+  writeMaterialPropertyField(octDA, treePartition, domainExtents, *leEq->equation());
 
-                                            LEBC.setBoundaryConditions(b, pos);
-                                            return b; });
+  //// now what we want to do is loop around all the three BCTypes
+  std::vector<BCTYPE> bctypes ={e100,e001,e010};
+  double Ceff[3][3] = {{0}};   // columns correspond to load cases
+  double eps0 = 1.0;           // or 1e-3
+  double gam0 = 1.0;           // or 1e-3
 
+  auto fillColumn = [&](int col, const double sig[3], double denom) {
+    Ceff[0][col] = sig[0] / denom;
+    Ceff[1][col] = sig[1] / denom;
+    Ceff[2][col] = sig[2] / denom;
+  };
 
-  /// Calculate Cmatrix here
-  inputData.Cmatrix.resize(3 * (DIM - 1));
-  util_funcs::CalcCmatrix(&inputData, inputData.Cmatrix);
-
-  /// Solve
-  TimerGroup<MPITimer> timers;
-  std::vector<std::string> timer_labels = {"Solving"};
-  std::map<std::string, int> timer_tags;
-  for (int i = 0; i < timer_labels.size(); i++)
+  int col = 0;
+  for (BCTYPE bctype : bctypes)
   {
-    timer_tags.insert(std::pair<std::string, int>(timer_labels[i], i));
-    timers.AddTimer(timer_labels[i]);
+    PrintStatus("Setting BC for Type",bctype);
+    leSolver->setDirichletBoundaryCondition([&](const TALYFEMLIB::ZEROPTV &pos, int nodeID) -> Boundary
+                                            {
+                                              Boundary b;
+                                              LEBC.setBoundaryConditions(b, pos,bctype);
+                                              return b; });
+
+    leSolver->solve();
+    std::string prefix = "displacement"+std::to_string(bctype);
+    petscVectopvtu(octDA, dTree.getTreePartFiltered(), leSolver->getCurrentSolution(), "Displacements",
+                   prefix.c_str(),varname, domainExtents, false, false, ndof);
+
+
+
+    // CalcStress calcStress(octDA, dTree.getTreePartFiltered(), {VecInfo(leSolver->getCurrentSolution(), LENodeData::LE_DOF, LENodeData::UX)}, domainExtents,
+    //                       &subDomain, &inputData, ti);
+    // CalcHomogenizedResponse(DA *octDA,
+    //                         const std::vector<TREENODE> &treePart,
+    //                         const VecInfo &v,
+    //                         const DomainExtents &domain,
+    //                         const SubDomain *subDomain,
+    //                         LEInputData *idata,
+    //                         const TimeInfo ti)
+
+    Vec solution = leSolver->getCurrentSolution();
+    VecInfo solutionInfo(solution, LENodeData::LE_DOF, 0);
+
+    CalcHomogenizedResponse calc_homogenized_response(octDA, dTree.getTreePartFiltered(), solutionInfo,
+      domainExtents,&subDomain,&inputData, ti, leEq->equation());
+
+    auto avg = calc_homogenized_response.getAverages();
+
+
+    double sig[3] = {avg.sxx, avg.syy, avg.txy};
+
+    if (bctype == e100) fillColumn(0, sig, eps0);
+    if (bctype == e010) fillColumn(1, sig, eps0);
+    if (bctype == e001) fillColumn(2, sig, gam0);
+
+
   }
-  PrintStatus("before solving!");
-  timers.Start(timer_tags["Solving"]);
-  leSolver->solve();
-  timers.Stop(timer_tags["Solving"]);
-  PrintStatus("solved!");
-  timers.PrintTotalTimeSeconds();
+  double C11 = Ceff[0][0];
+  double C12 = Ceff[0][1];
+  double C66 = Ceff[2][2];
 
-    petscVectopvtu(octDA, dTree.getTreePartFiltered(), leSolver->getCurrentSolution(), "results",
-                   "le",varname, domainExtents, false, false, ndof);
+  double nu_eff = 0.0;
+  if (inputData.caseType == CaseType::PLANESTRESS) {
+    nu_eff = C12 / C11;
+  } else { // PLANESTRAIN
+    nu_eff = C12 / (C11 + C12);
+  }
+
+  double E_eff = 2.0 * C66 * (1.0 + nu_eff);
+
+  if (rank == 0) {
+    auto rel = [](double a, double b) {
+      return std::abs(a - b) / (std::max({1.0, std::abs(a), std::abs(b)}));
+    };
+
+    const double tol = 1e-2;
+
+    const double rC12 = rel(Ceff[0][1], Ceff[1][0]);
+    const double rC11 = rel(Ceff[0][0], Ceff[1][1]);
+
+    const double C13 = Ceff[0][2];
+    const double C23 = Ceff[1][2];
+
+    const bool sym_ok   = (rC12 < tol);
+    const bool diag_ok  = (rC11 < tol);
+    const bool shear_ok = (std::abs(C13) < tol * std::abs(Ceff[0][0])) &&
+                          (std::abs(C23) < tol * std::abs(Ceff[0][0]));
+
+    const bool iso_ok = sym_ok && diag_ok && shear_ok;
+
+    std::cout << "\n================ Homogenization Summary ================\n";
+    std::cout << "Effective moduli:\n";
+    std::cout << "  E_eff  = " << E_eff  << "\n";
+    std::cout << "  nu_eff = " << nu_eff << "\n\n";
+
+    std::cout << "Material symmetry:\n";
+    std::cout << "  " << (iso_ok ? "Approximately isotropic" : "Anisotropic") << "\n\n";
+
+    std::cout << "Diagnostics (tol = " << tol << "):\n";
+    std::cout << "  rel(C12 - C21) = " << rC12 << "\n";
+    std::cout << "  rel(C11 - C22) = " << rC11 << "\n";
+    std::cout << "  C13            = " << C13  << "\n";
+    std::cout << "  C23            = " << C23  << "\n";
+    std::cout << "========================================================\n\n";
+  }
 
 
-  CalcStress calcStress(octDA, dTree.getTreePartFiltered(), {VecInfo(leSolver->getCurrentSolution(), LENodeData::LE_DOF, LENodeData::UX)}, domainExtents,
-                        &subDomain, &inputData, ti);
-#if (DIM ==3)
-  static const char *stress_varname[]{"strain_xx", "strain_yy", "strain_zz", "strain_xy", "strain_xz", "strain_yz",
-                                      "stress_xx", "stress_yy", "stress_zz", "stress_xy", "stress_xz", "stress_yz", "vonMises"};
-#endif
-
-#if (DIM ==2)
-    static const char *stress_varname[]{"strain_xx", "strain_yy", "strain_xy",
-                                      "stress_xx", "stress_yy", "stress_xy", "vonMises"};
-#endif
-
-  std::vector<double> StressVectorPerElement;
-  calcStress.getElementalstress(StressVectorPerElement);
-  IO::writeVecTopVtu(octDA, dTree.getTreePartFiltered(), StressVectorPerElement.data(), "results",
-                     "Stress", stress_varname,
-                     domainExtents, true, false, 6 * (DIM - 1) + 1);
 
 
-  Vec U_le = leSolver->getCurrentSolution();
-
-
-
-  static const char *varname2[]{"Displacment"};
-
-
-
-#if (DIM == 3)
-
-  IS x_is;
-  IS y_is;
-  IS z_is;
-  Vec U_mag = util_funcs::GetMag3D(U_le, x_is, y_is, z_is);
-
-//  util_funcs::writeVecTopVtu(octDA, dTree.getTreePartFiltered(), U_mag, "results",
-//                             "U_mag", varname2,
-//                             domainExtents, false, false, ndof);
-
-    petscVectopvtu(octDA, dTree.getTreePartFiltered(),U_mag, "results",
-                   "U_mag",varname2, domainExtents, false, false, ndof);
-
-#endif
-#if (DIM == 2)
-  IS x_is, y_is;
-  Vec U_mag = util_funcs::GetMag(U_le, x_is, y_is);
-  //
-  // util_funcs::save_timestep(octDA, treePartition, U_mag, 1, ti, subDomain, "leMag", varname2);
-  VecInfo v(U_mag, 1, 0);
-  // Analytic LEAnalytic(octDA, treePartition, v, analytic_sol, subDomain.domainExtents());
-  //  LEAnalytic.getL2error();
-#endif
-#if (DIM == 2)
-  Vec U_x, U_y;
-  util_funcs::GetVec(U_le, x_is, y_is, U_x, U_y);
-  VecInfo vx(U_x, 1, 0);
-  VecInfo vy(U_y, 1, 0);
-#endif
   delete leEq;
   delete leSolver;
 

@@ -1,0 +1,51 @@
+dt = 1
+totalT = 2
+
+################# LE #####################
+elemOrder = 1
+
+LEcaseType = "planestress"
+planestress = {
+  young = 1
+  poisson = 0
+}
+
+LEBCcaseType = "ZeroTraction"
+
+bodyforce_V = [0.0, 0.0, 0.0]
+
+radialbodyforce = {
+  BR_pow = -1
+  BR_v = 1.442695040888963
+}
+
+planeFiberProp = {
+  MatrixE = 1.0
+  Matrixmu = 0.0
+  FiberE = 10.0
+  Fibermu = 0.30
+  hardormixture = true
+  hardThresholdValue = 0.5
+  Image_Path = "./data/microstructure.png" # update to your PNG
+}
+
+channel_mesh = {
+  refine_lvl_base = 5
+  refine_lvl_channel_wall = 5
+  min = [0, 0, 0]
+  max = [2, 2, 2]
+  refine_walls = true
+}
+
+OutputStartTime = 1e8
+OutputInterval = 1
+CheckpointInterval = 10
+
+solver_options_le = {
+  ksp_max_it = 5000
+  ksp_type = "bcgs"
+  pc_type = "lu"
+  ksp_rtol = 1e-8
+  ksp_converged_reason = ""
+  ksp_monitor = ""
+}

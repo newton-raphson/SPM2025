@@ -1,227 +1,145 @@
-//
-// Created by chenghau on 9/14/23.
-//
-
-#ifndef LE_KT_CALCSTRESS_H
-#define LE_KT_CALCSTRESS_H
+#ifndef LE_KT_CALCHOMOGENIZEDRESPONSE_H
+#define LE_KT_CALCHOMOGENIZEDRESPONSE_H
 
 #include <Traversal/Traversal.h>
 #include <LEInputData.h>
+#include "SSLEEquation.h"
 
-class CalcStress : public Traversal
+// Collects domain averages of strain and stress:
+//   <eps> = (1/|Ω|) ∫ eps dΩ
+//   <sig> = (1/|Ω|) ∫ sig dΩ
+//
+// Then main can build C_eff by running 3 load cases:
+//
+//   Case 1: epsbar=[eps0,0,0]  => column1 = <sig>/eps0
+//   Case 2: epsbar=[0,eps0,0]  => column2 = <sig>/eps0
+//   Case 3: epsbar=[0,0,gam0]  => column3 = <sig>/gam0
+//
+class CalcHomogenizedResponse : public Traversal
 {
-
-    const SubDomain *subdomain_;
-    LEInputData *idata_;
-    std::vector<DENDRITE_REAL> stress_;
-    std::vector<DENDRITE_REAL>::iterator it;
-
-    std::vector<GEOMETRY::MSH *> mshs_;
-    std::vector<GEOMETRY::STL *> stls_;
-    ZEROPTV shift_;
-    std::vector<ZEROPTV> GPpos;
-    std::vector<ZEROPTV> GPposGlobal;
-
-    /// for setting diff the False Intercepted Element
-    int localElemID = 0;
-
-    const TimeInfo ti_;
-
 public:
-    CalcStress(DA *octDA, const std::vector<TREENODE> &treePart, const VecInfo &v,
-               const DomainExtents &domain, const SubDomain *subDomain, LEInputData *idata, const TimeInfo ti);
+  struct AvgVec2D {
+    double exx = 0.0, eyy = 0.0, gxy = 0.0; // engineering shear gamma_xy
+    double sxx = 0.0, syy = 0.0, txy = 0.0; // tau_xy
+    double vol = 0.0; // |Ω|
+  };
 
-    /**
-     * @brief Overriding the traversal class operation
-     * @param fe the element we use to access gauss points
-     * @param values nodal value on the cell
-     */
-    void traverseOperation(TALYFEMLIB::FEMElm &fe, const PetscScalar *values) override;
-
-    /**
-     * @brief return L2 residual
-     * @param residual L2 residual
-     */
-    // TODO: implementation
-    //    void getResidual(ZEROPTV *residual);
-
-    /**
-     * @brief return the stress on element cells
-     * @return residual vector on element cells
-     */
-    void getElementalstress(std::vector<DENDRITE_REAL> &stress)
-    {
-        stress = stress_;
-    }
-
-    void WritePostProcessVolumeGPToFile();
-};
-
-CalcStress::CalcStress(DA *octDA, const std::vector<TREENODE> &treePart, const VecInfo &v, const DomainExtents &domain,
-                       const SubDomain *subDomain, LEInputData *idata, const TimeInfo ti)
-    : Traversal(octDA, treePart, v, domain), subdomain_(subDomain), idata_(idata), ti_(ti)
-{
-    stress_.resize((6 * (DIM - 1) + 1) * treePart.size(), 0.0);
-    it = stress_.begin();
-
+  CalcHomogenizedResponse(DA *octDA,
+                          const std::vector<TREENODE> &treePart,
+                          const VecInfo &v,
+                          const DomainExtents &domain,
+                          const SubDomain *subDomain,
+                          LEInputData *idata,
+                          const TimeInfo ti,
+                          const SSLEEquation *equation = nullptr)
+      : Traversal(octDA, treePart, v, domain),
+        subdomain_(subDomain),
+        idata_(idata),
+        ti_(ti),
+        equation_(equation)
+  {
+    // run traversal immediately
     this->traverse();
-}
 
-void CalcStress::traverseOperation(TALYFEMLIB::FEMElm &fe, const PetscScalar *values)
-{
+    // reduce across MPI
+    reduceMPI_();
+  }
+
+  AvgVec2D getAverages() const { return avg_; }
+
+  // Convenience: just averaged stress vector in Voigt order [sxx, syy, txy]
+  void getAvgStress(double out[3]) const {
+    out[0] = avg_.sxx; out[1] = avg_.syy; out[2] = avg_.txy;
+  }
+
+  // Convenience: just averaged strain vector in Voigt order [exx, eyy, gxy]
+  void getAvgStrain(double out[3]) const {
+    out[0] = avg_.exx; out[1] = avg_.eyy; out[2] = avg_.gxy;
+  }
+
+private:
+  const SubDomain *subdomain_ = nullptr;
+  LEInputData *idata_ = nullptr;
+  const TimeInfo ti_;
+  const SSLEEquation *equation_ = nullptr;
+
+  AvgVec2D avg_;      // final (MPI-reduced) averages
+  AvgVec2D local_;    // local accumulators before MPI reduction
+
+  void traverseOperation(TALYFEMLIB::FEMElm &fe, const PetscScalar *values) override
+  {
+#if (DIM != 2)
+    static_assert(DIM == 2, "CalcHomogenizedResponse currently implemented for DIM==2");
+#endif
+
     const DENDRITE_UINT ndof = this->getNdof();
-
-    double VonMisesStress = 0.0;
-
     fe.refill(0, 0);
-
-    std::vector<double> StrainVector(3 * (DIM - 1));
-#ifndef NDEBUG
-//    std::vector<std::vector<double>> StrainVector_eachGP(fe.nbf());
-#endif
-
-#ifndef NDEBUG
-//    int GPID = 0;
-#endif
 
     while (fe.next_itg_pt())
     {
-#ifndef NDEBUG
-//        StrainVector_eachGP[GPID].resize(3 * (DIM - 1));
-#endif
+      // Compute displacement gradients du_i/dx_j at this Gauss point
+      DENDRITE_REAL duidj[LENodeData::LE_DOF * DIM];
+      calcValueDerivativeFEM(fe, ndof, values, duidj);
 
-        DENDRITE_REAL duidj[LENodeData::LE_DOF * DIM];
-        calcValueDerivativeFEM(fe, ndof, values, duidj);
+      // Engineering strain (small strain) at GP:
+      // exx = du/dx, eyy = dv/dy, gxy = du/dy + dv/dx
+      const double exx = duidj[0 * DIM + 0];
+      const double eyy = duidj[1 * DIM + 1];
+      const double gxy = duidj[0 * DIM + 1] + duidj[1 * DIM + 0];
 
-        for (int i = 0; i < DIM; i++)
-        {
-            StrainVector[i] += duidj[i * DIM + i] / fe.n_itg_pts();
-#ifndef NDEBUG
-//            StrainVector_eachGP[GPID][i] = duidj[i * DIM + i] / fe.nbf();
-#endif
-        }
+      double localC[3 * (DIM - 1)][3 * (DIM - 1)]{};
+      const bool useLocalMaterial = (equation_ != nullptr);
+      if (useLocalMaterial) {
+        equation_->buildLocalCmatrix(fe.position(), localC);
+      }
+      const auto coeff = [&](int row, int col) -> double {
+        return useLocalMaterial ? localC[row][col] : idata_->Cmatrix[row][col];
+      };
 
-        StrainVector[DIM] += (duidj[0 * DIM + 1] + duidj[1 * DIM + 0]) / fe.n_itg_pts();
-#ifndef NDEBUG
-//        StrainVector_eachGP[GPID][DIM] = duidj[0 * DIM + 1] + duidj[1 * DIM + 0];
-#endif
+      double sxx = coeff(0, 0) * exx + coeff(0, 1) * eyy + coeff(0, 2) * gxy;
+      double syy = coeff(1, 0) * exx + coeff(1, 1) * eyy + coeff(1, 2) * gxy;
+      double txy = coeff(2, 0) * exx + coeff(2, 1) * eyy + coeff(2, 2) * gxy;
 
-#if (DIM == 3)
-        StrainVector[4] += (duidj[0 * DIM + 2] + duidj[2 * DIM + 0]) / fe.nbf();
-        StrainVector[5] += (duidj[1 * DIM + 2] + duidj[2 * DIM + 1]) / fe.nbf();
-#ifndef NDEBUG
-//        StrainVector_eachGP[GPID][4] = duidj[0 * DIM + 2] + duidj[2 * DIM + 0];
-//        StrainVector_eachGP[GPID][5] = duidj[1 * DIM + 2] + duidj[2 * DIM + 1];
-#endif
-#endif
+      // GP weight (physical): detJ * w_gp
+      const double w = fe.detJxW();
 
-#ifndef NDEBUG
-//        std::cout << "GPID = " << GPID << ", strain = ";
-//        for (int i = 0; i < 3 * (DIM - 1); i++)
-//        {
-//            std::cout << StrainVector_eachGP[GPID][i] << " ";
-//        }
-//        std::cout << "\n";
-//        GPID++;
-#endif
+      // Accumulate integrals
+      local_.exx += exx * w;
+      local_.eyy += eyy * w;
+      local_.gxy += gxy * w;
+
+      local_.sxx += sxx * w;
+      local_.syy += syy * w;
+      local_.txy += txy * w;
+
+      local_.vol += w;
     }
-#ifndef NDEBUG
-//    std::cout << " ------------------------- \n";
-#endif
+  }
 
-    std::vector<double> StressVector(3 * (DIM - 1));
+  void reduceMPI_()
+  {
+    // Sum across ranks
+    double send[7] = {local_.exx, local_.eyy, local_.gxy,
+                      local_.sxx, local_.syy, local_.txy,
+                      local_.vol};
+    double recv[7] = {0,0,0,0,0,0,0};
 
-    for (int row = 0; row < StrainVector.size(); row++)
-    {
-        for (int col = 0; col < StrainVector.size(); col++)
-        {
-            StressVector[row] += idata_->Cmatrix[row][col] * StrainVector[col];
-        }
+    MPI_Allreduce(send, recv, 7, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    // Normalize to averages
+    const double vol = recv[6];
+    avg_.vol = vol;
+
+    if (vol > 0.0) {
+      avg_.exx = recv[0] / vol;
+      avg_.eyy = recv[1] / vol;
+      avg_.gxy = recv[2] / vol;
+
+      avg_.sxx = recv[3] / vol;
+      avg_.syy = recv[4] / vol;
+      avg_.txy = recv[5] / vol;
     }
+  }
+};
 
-    // von-mises stress
-#if (DIM == 3)
-    VonMisesStress = sqrt((pow(StressVector[0] - StressVector[1], 2) + pow(StressVector[1] - StressVector[2], 2) + pow(StressVector[2] - StressVector[0], 2) + 6 * (pow(StressVector[3], 2) + pow(StressVector[4], 2) + pow(StressVector[5], 2))) / 2);
-#endif
-
-#if (DIM == 2)
-    // TODO: please make sure it is correct!
-    VonMisesStress = sqrt(pow(StressVector[0], 2) + pow(StressVector[1], 2) - StressVector[0] * StressVector[1] + 3 * pow(StressVector[2], 2));
-#endif
-
-    for (int i = 0; i < 3 * (DIM - 1); i++)
-    {
-        *it = StrainVector[i];
-        it = std::next(it);
-    }
-
-    for (int i = 0; i < 3 * (DIM - 1); i++)
-    {
-        *it = StressVector[i];
-        it = std::next(it);
-    }
-
-    *it = VonMisesStress;
-    it = std::next(it); // do forget this (previous mistake I made)
-    //    std::cout << "*it = " << *it << "\n";
-}
-
-void CalcStress::WritePostProcessVolumeGPToFile()
-{
-    int nProc = TALYFEMLIB::GetMPISize(); // be careful
-    int numNodes = GPpos.size();
-    std::vector<int> eachProcData(nProc);
-    MPI_Allgather(&numNodes, 1, MPI_INT, eachProcData.data(), 1, MPI_INT, MPI_COMM_WORLD);
-
-    std::vector<int> disp(nProc, 0);
-    for (int i = 1; i < disp.size(); i++)
-    {
-        disp[i] = disp[i - 1] + eachProcData[i - 1];
-    }
-
-    int totalProcData = 0;
-    for (int i = 0; i < nProc; i++)
-    {
-        totalProcData += eachProcData[i];
-    }
-
-    if (TALYFEMLIB::GetMPIRank() == 0)
-    {
-        GPposGlobal.resize(totalProcData);
-    }
-
-    MPI_Datatype ZEROPTVtype;
-    MPI_Type_contiguous(3, MPI_DOUBLE, &ZEROPTVtype);
-    MPI_Type_commit(&ZEROPTVtype);
-    MPI_Gatherv(GPpos.data(), GPpos.size(), ZEROPTVtype, GPposGlobal.data(), eachProcData.data(), disp.data(), ZEROPTVtype, 0, MPI_COMM_WORLD);
-
-    std::string fPrefix = "PostProcessvolumeGP.vtk";
-    if (TALYFEMLIB::GetMPIRank() == 0)
-    { // if:master cpu, then:print
-        FILE *fp = fopen(fPrefix.c_str(), "w");
-
-#if (DIM == 2)
-        fprintf(fp, "x0,y0\n");
-#endif
-
-#if (DIM == 3)
-        fprintf(fp, "x0,y0,z0\n");
-#endif
-
-        for (int i = 0; i < GPposGlobal.size(); i++)
-        {
-#if (DIM == 2)
-            fprintf(fp, "%.10e,%.10e\n",
-                    GPposGlobal[i](0), GPposGlobal[i](1));
-#endif
-#if (DIM == 3)
-            fprintf(fp, "%.10e,%.10e,%.10e\n",
-                    GPposGlobal[i](0), GPposGlobal[i](1), GPposGlobal[i](2));
-#endif
-        }
-
-        fclose(fp);
-    }
-}
-
-#endif // LE_KT_CALCSTRESS_H
+#endif // LE_KT_CALCHOMOGENIZEDRESPONSE_H
